@@ -1,0 +1,23 @@
+{
+    "nodes": [
+        {
+            "id": "daniel",
+            "name": "daniel"
+        },
+        {
+            "id": "jason",
+            "name": "jason"
+        },
+        {
+            "id": "niema",
+            "name": "niema"
+        }
+    ],
+    "links": [
+        {
+            "source": "daniel",
+            "target": "jason",
+            "name": "roommates"
+        }
+    ]
+}
