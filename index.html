@@ -21,37 +21,102 @@
     <div id="form">
         <h1>Form Input</h1>
         <h2>Add States</h2>
-        <div class="input-group mb-3 w-50">
-            <input type="text" id="s-1-input-1" class="form-control" placeholder="State Name" aria-label="State Name">
-        </div>
     </div>
 
 
     <script>
+        // Global Variables
+        let inputCounter = 0;
+        let data = {
+            "nodes": [],
+            "links": []
+        }
+
+        // On Load
+        createNewInput();
 
         // Form Javascript
-        const input = document.getElementById('s-1-input-1');
 
-        input.addEventListener('input', updateValue);
+        function createNewInput() {
+            inputCounter++;
 
-        function updateValue(e) {
-            console.log(e.target.value);
+            const inptGroup = document.createElement("div");
+            inptGroup.id = "input-group";
+            inptGroup.className = "input-group mb-3 w-100";
+
+            const inpt = document.createElement("input");
+            inpt.type = 'text';
+            inpt.id = 's-1-input-' + inputCounter;
+            inpt.className = 'form-control';
+            inpt.placeholder = 'State Name';
+            inpt.ariaLabel = 'State Name';
+
+            const button = document.createElement("button");
+            button.className = "btn btn-danger";
+            button.type = "button";
+            button.id = "button-addon-" + inputCounter;
+            button.count = inputCounter;
+            const node = document.createTextNode("Delete");
+            button.appendChild(node);
+
+            button.addEventListener('click', deleteInput);
+
+            function deleteInput(e) {
+                // make sure that we're not deleting the only input left
+                if (button.count !== inputCounter) {
+                    inptGroup.remove();
+                    data.nodes = data.nodes.filter(node => node.id != button.count);
+                    Graph.graphData(data);
+                }
+            }
+
+
+            const element = document.getElementById("form");
+            element.appendChild(inptGroup);
+            inptGroup.appendChild(inpt);
+            inptGroup.appendChild(button);
+
+            // Event Listener To Create New Input
+            inpt.addEventListener('input', updateValue);
+            let inputCreated = false;
+
+            function updateValue(e) {
+
+                if (!inputCreated) {
+                    // make new input box
+                    inputCreated = true;
+                    data.nodes.push({
+                        id: button.count,
+                        name: e.target.value
+                    })
+                    Graph.graphData(data);
+                    createNewInput();
+                } else {
+                    // update node
+                    let node = data.nodes.find(x => x.id === button.count);
+                    node.name = e.target.value;
+                    console.log(data);
+                    Graph.graphData(data);
+                }
+            }
         }
 
         // Graph Javascript
-        fetch('./data.json').then(res => res.json()).then(data => {
-            const Graph = ForceGraph()
-                (document.getElementById('graph'))
-                .graphData(data)
-                .nodeId('id')
-                .nodeVal('val')
-                .nodeLabel('id')
-                .nodeAutoColorBy('group')
-                .linkSource('source')
-                .linkTarget('target')
-                .width(window.innerWidth * .7)
-                .height(window.innerHeight)
-        });
+
+        const Graph = ForceGraph()
+            (document.getElementById('graph'))
+            .graphData(data)
+            .nodeId('id')
+            .nodeVal('val')
+            .nodeLabel('name')
+            .nodeAutoColorBy('group')
+            .linkSource('source')
+            .linkTarget('target')
+            .width(window.innerWidth * .7)
+            .height(window.innerHeight)
+            .maxZoom(5)
+            .minZoom(1)
+
     </script>
 </body>
 

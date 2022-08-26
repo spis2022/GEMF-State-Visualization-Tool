@@ -9,11 +9,15 @@ body {
 }
 
 #graph {
+    border: 2px black;
+    box-sizing: content-box;
     width: 70vw;
     height: 100vh;
 }
 
 #form {
+    padding: 2vw;
     width: 30vw;
     height: 100vh;
+    overflow-y: scroll;
 }
