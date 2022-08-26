@@ -14,6 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-A3rJD856KowSb7dwlZdYEkO39Gagi7vIsF0jrRAoQmDKKtQBHUuLZ9AsSv4jD4Xa"
         crossorigin="anonymous"></script>
+    <script src="index.js"></script>
 </head>
 
 <body>
@@ -21,103 +22,11 @@
     <div id="form">
         <h1>Form Input</h1>
         <h2>Add States</h2>
+        <div id="inputs"></div>
+        <div id="button-container">
+            <button onclick="handleNext()" type="button" class="btn btn-success">Next</button>
+        </div>
     </div>
-
-
-    <script>
-        // Global Variables
-        let inputCounter = 0;
-        let data = {
-            "nodes": [],
-            "links": []
-        }
-
-        // On Load
-        createNewInput();
-
-        // Form Javascript
-
-        function createNewInput() {
-            inputCounter++;
-
-            const inptGroup = document.createElement("div");
-            inptGroup.id = "input-group";
-            inptGroup.className = "input-group mb-3 w-100";
-
-            const inpt = document.createElement("input");
-            inpt.type = 'text';
-            inpt.id = 's-1-input-' + inputCounter;
-            inpt.className = 'form-control';
-            inpt.placeholder = 'State Name';
-            inpt.ariaLabel = 'State Name';
-
-            const button = document.createElement("button");
-            button.className = "btn btn-danger";
-            button.type = "button";
-            button.id = "button-addon-" + inputCounter;
-            button.count = inputCounter;
-            const node = document.createTextNode("Delete");
-            button.appendChild(node);
-
-            button.addEventListener('click', deleteInput);
-
-            function deleteInput(e) {
-                // make sure that we're not deleting the only input left
-                if (button.count !== inputCounter) {
-                    inptGroup.remove();
-                    data.nodes = data.nodes.filter(node => node.id != button.count);
-                    Graph.graphData(data);
-                }
-            }
-
-
-            const element = document.getElementById("form");
-            element.appendChild(inptGroup);
-            inptGroup.appendChild(inpt);
-            inptGroup.appendChild(button);
-
-            // Event Listener To Create New Input
-            inpt.addEventListener('input', updateValue);
-            let inputCreated = false;
-
-            function updateValue(e) {
-
-                if (!inputCreated) {
-                    // make new input box
-                    inputCreated = true;
-                    data.nodes.push({
-                        id: button.count,
-                        name: e.target.value
-                    })
-                    Graph.graphData(data);
-                    createNewInput();
-                } else {
-                    // update node
-                    let node = data.nodes.find(x => x.id === button.count);
-                    node.name = e.target.value;
-                    console.log(data);
-                    Graph.graphData(data);
-                }
-            }
-        }
-
-        // Graph Javascript
-
-        const Graph = ForceGraph()
-            (document.getElementById('graph'))
-            .graphData(data)
-            .nodeId('id')
-            .nodeVal('val')
-            .nodeLabel('name')
-            .nodeAutoColorBy('group')
-            .linkSource('source')
-            .linkTarget('target')
-            .width(window.innerWidth * .7)
-            .height(window.innerHeight)
-            .maxZoom(5)
-            .minZoom(1)
-
-    </script>
 </body>
 
 </html>
