@@ -1,0 +1,19 @@
+html, body {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+    display: flex;
+    margin: 0;
+}
+
+#graph {
+    width: 70vw;
+    height: 100vh;
+}
+
+#form {
+    width: 30vw;
+    height: 100vh;
+}
