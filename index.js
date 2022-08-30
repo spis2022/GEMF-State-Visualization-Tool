@@ -1,5 +1,5 @@
 // Global Variables
-const nodeRadius = 12;
+const NODE_RADIUS = 12;
 let Graph;
 let inputCounter = 0;
 let data = {
@@ -18,7 +18,7 @@ window.onload = function() {
 
     Graph.graphData(data)
         .nodeId('id')
-        .nodeVal(nodeRadius)
+        .nodeVal(NODE_RADIUS)
         .nodeLabel('')
         .nodeAutoColorBy('group')
         .linkSource('source')
@@ -39,14 +39,14 @@ window.onload = function() {
             ctx.fillText(label, node.x, node.y);
             // draw circle
             ctx.beginPath();
-            ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI);
+            ctx.arc(node.x, node.y, NODE_RADIUS, 0, 2 * Math.PI);
             ctx.stroke();
         })
         .linkCanvasObject((link, ctx, globalScale) => {
             ctx.lineWidth = 1;
-            const curveRadius = nodeRadius * 4;
-            const curveX = link.target.x + nodeRadius / 2 / Math.sin(Math.PI / 4);
-            const curveY = link.target.y - nodeRadius / 2 / Math.sin(Math.PI / 4);
+            const curveRadius = 2 * NODE_RADIUS;
+            const curveX = link.target.x + NODE_RADIUS / 2 / Math.sin(Math.PI / 4);
+            const curveY = link.target.y - NODE_RADIUS / 2 / Math.sin(Math.PI / 4);
             if (link.source.id === link.target.id) {
                 ctx.beginPath();
                 ctx.strokeStyle = "black";
@@ -61,24 +61,28 @@ window.onload = function() {
                 ctx.lineTo(source[2], source[3]);
                 ctx.stroke();
                 ctx.beginPath();
-                ctx.arc((link.target.x + link.source.x) / 2, (link.target.y + link.source.y) / 2, nodeRadius / 1.5, 0, 2 * Math.PI);
-                ctx.fillStyle = "white";
-                ctx.fill();
-                ctx.strokeStyle = "green";
-                ctx.stroke();
+                if (link.repeated) {
+                    // TODO: Make curved verison
+                } else {
+                    ctx.arc((link.target.x + link.source.x) / 2, (link.target.y + link.source.y) / 2, NODE_RADIUS * 0.5, 0, 2 * Math.PI);
+                    ctx.fillStyle = "white";
+                    ctx.fill();
+                    ctx.strokeStyle = "green";
+                    ctx.stroke();
+                }
             }
         })
         .d3Force('charge', null)
         .d3Force('center', null)
-        .d3Force('collide', d3.forceCollide(nodeRadius / 2))
+        .d3Force('collide', d3.forceCollide(NODE_RADIUS / 2))
         .d3Force('link', null)
 
     function scaleTriangle(link) {
         const d = Math.sqrt((Math.pow(link.target.x - link.source.x, 2) + Math.pow(link.target.y - link.source.y, 2)))
         const d_y = link.target.y - link.source.y;
         const d_x = link.target.x - link.source.x;
-        const y_i = ((nodeRadius * d_y) / d);
-        const x_i = ((nodeRadius * d_x) / d);
+        const y_i = ((NODE_RADIUS * d_y) / d);
+        const x_i = ((NODE_RADIUS * d_x) / d);
         return [x_i + link.source.x, y_i + link.source.y, -x_i + link.target.x, -y_i + link.target.y];
     }
 
@@ -181,9 +185,13 @@ function createNewInput() {
             inputCreated = true;
             data.nodes.push({
                 id: button.count,
-                name: e.target.value
+                name: e.target.value,
+                x: 0,
+                y: 0
             })
+            Graph.d3Force('collide', d3.forceCollide(NODE_RADIUS))
             Graph.graphData(data);
+            setTimeout(() => Graph.d3Force('collide', d3.forceCollide(NODE_RADIUS / 2)), 400)
             createNewInput();
         } else {
             // update node
@@ -287,6 +295,8 @@ function renderStep2() {
                 formCheck.className = "form-check";
 
                 const link = data.links.find(obj => obj.source.id === data.nodes[i].id && obj.target.id === data.nodes[j].id)
+                let repeatedLink = data.links.find(obj => obj.source.id === data.nodes[j].id && obj.target.id === data.nodes[i].id)
+                console.log(repeatedLink);
 
                 const input = document.createElement("input");
                 input.className = "form-check-input";
@@ -297,13 +307,22 @@ function renderStep2() {
                     input.checked = true;
                 }
                 input.onclick = function() {
+                    repeatedLink = data.links.find(obj => obj.source.id === data.nodes[j].id && obj.target.id === data.nodes[i].id)
+
                     if (input.checked) {
                         data.links.push({
                             source: data.nodes[i].id,
                             target: data.nodes[j].id,
+                            repeated: repeatedLink !== undefined
                         })
+                        if (repeatedLink !== undefined) {
+                            repeatedLink.repeated = true;
+                        }
                     } else {
                         data.links = data.links.filter(link => !(link.source.id === data.nodes[i].id && link.target.id === data.nodes[j].id));
+                        if (repeatedLink !== undefined) {
+                            repeatedLink.repeated = false;
+                        }
                     }
                     console.log(data.links);
                     Graph.graphData(data);
