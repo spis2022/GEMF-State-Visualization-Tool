@@ -1,12 +1,15 @@
-// Global Variables
+// ---- Global Variables ----
 const NODE_RADIUS = 12;
+const ARROW_SIZE = 4;
 let Graph;
+// keeps track of how many step 1 input boxes have been created
 let inputCounter = 0;
 let data = {
     "nodes": [],
     "links": []
 }
 let step = 1;
+
 
 // On Load
 window.onload = function() {
@@ -23,8 +26,8 @@ window.onload = function() {
         .nodeAutoColorBy('group')
         .linkSource('source')
         .linkTarget('target')
-        .width(window.innerWidth * .7)
-        .height(window.innerHeight)
+        .width(window.innerWidth >= 768 ? window.innerWidth * .7 : window.innerWidth)
+        .height(window.innerWidth >= 768 ? window.innerHeight : window.innerHeight * 0.6)
         .maxZoom(5)
         .minZoom(1)
         .nodeCanvasObject((node, ctx, globalScale) => {
@@ -47,35 +50,55 @@ window.onload = function() {
             const curveRadius = 2 * NODE_RADIUS;
             const curveX = link.target.x + NODE_RADIUS / 2 / Math.sin(Math.PI / 4);
             const curveY = link.target.y - NODE_RADIUS / 2 / Math.sin(Math.PI / 4);
-            if (link.source.id === link.target.id) {
+            const drawArrow = (ctx, x1, y1, x2, y2, t = 0.9) => {
+                const adx = x2 - x1;           // arrow dx
+                const ady = y2 - y1;           // arrow dy
+                const dist = Math.sqrt(adx * adx + ady * ady);
+                const middleX = x2 - ARROW_SIZE * adx / dist;  // shaft end x
+                const middleY = y2 - ARROW_SIZE * ady / dist; // shaft end y
+                const tdx = x2 - middleX;      // tip dx
+                const tdy = y2 - middleY;      // tip dy
                 ctx.beginPath();
-                ctx.strokeStyle = "black";
-                ctx.moveTo(curveX, curveY);
-                ctx.bezierCurveTo(curveX, curveY - curveRadius, curveX + curveRadius, curveY, curveX, curveY);
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(middleX, middleY);
+                ctx.moveTo(middleX + 0.5 * tdy, middleY - 0.5 * tdx);
+                ctx.lineTo(middleX - 0.5 * tdy, middleY + 0.5 * tdx);
+                ctx.lineTo(x2, y2);
+                ctx.closePath();
                 ctx.stroke();
+            };
+            const source = scaleTriangle(link);
+            ctx.beginPath();
+            ctx.strokeStyle = "black";
+            // ctx.moveTo(source[0], source[1]);
+            // ctx.lineTo(source[2], source[3]);
+            const dx = (source[2] - source[0]) * 0.99;
+            const dy = (source[3] - source[1]) * 0.99;
+            drawArrow(ctx, source[0], source[1], source[0] + dx, source[1] + dy, .9);
+            ctx.fillStyle = "black";
+            ctx.fill();
+            ctx.stroke();
+            ctx.beginPath();
+            if (link.repeated) {
+                // TODO: Make curved verison
             } else {
-                const source = scaleTriangle(link);
-                ctx.beginPath();
-                ctx.strokeStyle = "black";
-                ctx.moveTo(source[0], source[1]);
-                ctx.lineTo(source[2], source[3]);
+                ctx.arc((link.target.x + link.source.x) / 2, (link.target.y + link.source.y) / 2, NODE_RADIUS * 0.5, 0, 2 * Math.PI);
+                ctx.fillStyle = "white";
+                ctx.fill();
+                ctx.strokeStyle = "green";
                 ctx.stroke();
-                ctx.beginPath();
-                if (link.repeated) {
-                    // TODO: Make curved verison
-                } else {
-                    ctx.arc((link.target.x + link.source.x) / 2, (link.target.y + link.source.y) / 2, NODE_RADIUS * 0.5, 0, 2 * Math.PI);
-                    ctx.fillStyle = "white";
-                    ctx.fill();
-                    ctx.strokeStyle = "green";
-                    ctx.stroke();
-                }
+                // TODO: make global variable
+                // TODO: font-sizing so that the text fits in the circle
+                ctx.fillStyle = "black";
+                ctx.font = "bold 4px sans-serif";
+                ctx.fillText(link.rate ?? "", (link.target.x + link.source.x) / 2, (link.target.y + link.source.y) / 2);
             }
         })
         .d3Force('charge', null)
         .d3Force('center', null)
         .d3Force('collide', d3.forceCollide(NODE_RADIUS / 2))
         .d3Force('link', null)
+
 
     function scaleTriangle(link) {
         const d = Math.sqrt((Math.pow(link.target.x - link.source.x, 2) + Math.pow(link.target.y - link.source.y, 2)))
@@ -109,6 +132,14 @@ function handleNext() {
         step2.style.display = "none";
         step3.style.display = "flex";
         renderStep3();
+    } else if (step === 3) {
+        //step3Next();
+        step++;
+        const step3 = document.getElementById("step3-container");
+        const step4 = document.getElementById("step4-container");
+        step3.style.display = "none";
+        step4.style.display = "flex";
+        renderStep4();
     }
 }
 
@@ -125,6 +156,12 @@ function handleBack() {
         const step3 = document.getElementById("step3-container");
         step2.style.display = "flex";
         step3.style.display = "none";
+    } else if (step === 4) {
+        step--;
+        const step3 = document.getElementById("step3-container");
+        const step4 = document.getElementById("step4-container");
+        step3.style.display = "flex";
+        step4.style.display = "none";
     }
 }
 
@@ -133,101 +170,136 @@ function handleBack() {
 // -------- STEP 1 --------
 
 
-
+// creates a new input box for a new node in step 1
 function createNewInput() {
+    // increment (by 1) the amount of inputs we created
     inputCounter++;
 
+    // holds everything for this new input
     const inptGroup = document.createElement("div");
-    inptGroup.id = "input-group";
+    // making the input group a bootstrap-styled input group
     inptGroup.className = "input-group mb-3 w-100";
 
+    // the actual input
     const inpt = document.createElement("input");
+    // sets the type of input to a text input
     inpt.type = 'text';
+    // gives the input a unique id (so we can reference later to correspond to the correct node)
     inpt.id = 's-1-input-' + inputCounter;
+    // making the input a bootstrap-styled input
     inpt.className = 'form-control';
+    // setting placeholder
     inpt.placeholder = 'State Name';
+    // for bootstrap / accessibility  
     inpt.ariaLabel = 'State Name';
 
+    // create input button to delete an input / node
     const button = document.createElement("button");
+    // bootstrap styling it
     button.className = "btn btn-danger";
     button.type = "button";
+    // unique button id that corresponds to a node
     button.id = "button-addon-" + inputCounter;
+    // unique button id, but just the number 
     button.count = inputCounter;
-    const node = document.createTextNode("Delete");
-    button.appendChild(node);
+    // sets the button text
+    button.innerHTML = "Delete";
 
+    // listens to see if user presses delete button
     button.addEventListener('click', deleteInput);
 
     function deleteInput(e) {
-        // make sure that we're not deleting the only input left
+        // make sure that we're not deleting the last input (which means we always have at least one input)
         if (button.count !== inputCounter) {
+            // deletes the input group from the DOM
             inptGroup.remove();
+            // keeps every node that has an id not equal to the button.count (corresponds to a specific node) 
             data.nodes = data.nodes.filter(node => node.id !== button.count);
+            // keeps every link that doesn't have source node id equal to the button.count or a target node id equal to the button count 
+            // deletes any links that go from or to the node
             data.links = data.links.filter(link => !(link.source.id === button.count || link.target.id === button.count))
             Graph.graphData(data);
         }
     }
 
-
+    // get the step1-container
     const element = document.getElementById("step1-container");
+    // put input group inside the step1-container
     element.appendChild(inptGroup);
+    // put inpt into input group 
     inptGroup.appendChild(inpt);
+    // put button into input group, after the input
     inptGroup.appendChild(button);
 
-    // Event Listener To Create New Input
+    // listens to see if the input text got changed
     inpt.addEventListener('input', updateValue);
+    // keeps track of whether the input has already been created 
     let inputCreated = false;
 
     function updateValue(e) {
-
+        // if the input has not been created
         if (!inputCreated) {
-            // make new input box
+            // set the input to have been created
             inputCreated = true;
+            // create a new node (and push it to the data.nodes) and give the new node's name a value of whatever was input
             data.nodes.push({
                 id: button.count,
                 name: e.target.value,
                 x: 0,
                 y: 0
             })
+            // temporarily sets the collision force to the whole node radius so that nodes do not intersect on creation
             Graph.d3Force('collide', d3.forceCollide(NODE_RADIUS))
             Graph.graphData(data);
             setTimeout(() => Graph.d3Force('collide', d3.forceCollide(NODE_RADIUS / 2)), 400)
+            // set up a new blank input box 
             createNewInput();
         } else {
-            // update node
+            // find the pre-existing node by id
             let node = data.nodes.find(x => x.id === button.count);
+            // updates the name to the new value in the input
             node.name = e.target.value;
             Graph.graphData(data);
         }
     }
 }
+
+// validating step 1 nodes and proceeding to step 2 if all is good
 function step1Next() {
-    // check inputs
-    let badState = new Set();
+    // create empty set that will hold duplicate / empty nodes
+    let badState = new Set(); 
     for (let i = 0; i < data.nodes.length; i++) {
         // check for duplicate state names
         for (let j = i + 1; j < data.nodes.length; j++) {
+            // if two nodes have the same name, then both get added to the badState Set
             if (data.nodes[i].name === data.nodes[j].name) {
                 badState.add(data.nodes[i].id);
                 badState.add(data.nodes[j].id);
             }
         }
-        // check for empty state names
+        // if the node name is an empty string, then add it to the badState Set 
         if (data.nodes[i].name.length === 0) {
             badState.add(data.nodes[i].id);
         }
     }
+
+    // makes the badState Set into an array (which can be iterated over)
     const repeat = Array.from(badState);
     for (let i = 0; i < repeat.length; i++) {
+        // finds the corresponding input and adds a red border
         const element = document.getElementById('s-1-input-' + repeat[i]);
         element.className += " border border-danger"
     }
 
+    // if there's no bad nodes and we have at least one node, continue to step 2 
     if (repeat.length === 0 && data.nodes.length > 0) {
-        // TODO: re-organize data.nodes
+        // increment step (move to next step)
         step++;
+        // get step 1 container and hide it
         const element = document.getElementById("step1-container");
         element.style.display = "none";
+        // sorts the nodes alphabetically 
+        data.nodes.sort((a, b) => a.name.localeCompare(b.name));
         renderStep2();
     }
 }
@@ -256,41 +328,39 @@ function renderStep2() {
     container.appendChild(accordion);
 
     for (let i = 0; i < data.nodes.length; i++) {
-        if (document.getElementById("openAccordionHeading-" + data.nodes[i].id) === null) {
-            const accordionItem = document.createElement("div");
-            accordionItem.className = "accordion-item";
+        const accordionItem = document.createElement("div");
+        accordionItem.className = "accordion-item";
 
-            const accordionHeader = document.createElement("h2");
-            accordionHeader.className = "accordion-header";
-            accordionHeader.id = "openAccordionHeading-" + data.nodes[i].id;
+        const accordionHeader = document.createElement("h2");
+        accordionHeader.className = "accordion-header";
+        accordionHeader.id = "openAccordionHeading-" + data.nodes[i].id;
 
-            const accordionButton = document.createElement("button");
-            accordionButton.className = "accordion-button" + (i === 0 ? "" : " collapsed");
-            accordionButton.type = "button";
-            accordionButton.setAttribute("data-bs-toggle", "collapse");
-            accordionButton.setAttribute("data-bs-target", "#panels-collapse-" + data.nodes[i].id);
-            accordionButton.ariaExpanded = i === 0 ? "true" : "false";
-            accordionButton.setAttribute("aria-controls", "panels-collapse-" + data.nodes[i].id);
-            accordionButton.innerHTML = "Links to State " + data.nodes[i].name + ":"
+        const accordionButton = document.createElement("button");
+        accordionButton.className = "accordion-button" + (i === 0 ? "" : " collapsed");
+        accordionButton.type = "button";
+        accordionButton.setAttribute("data-bs-toggle", "collapse");
+        accordionButton.setAttribute("data-bs-target", "#panels-collapse-" + data.nodes[i].id);
+        accordionButton.ariaExpanded = i === 0 ? "true" : "false";
+        accordionButton.setAttribute("aria-controls", "panels-collapse-" + data.nodes[i].id);
+        accordionButton.innerHTML = "Links to State " + data.nodes[i].name + ":"
 
-            const accordionPanel = document.createElement("div");
-            accordionPanel.id = "panels-collapse-" + data.nodes[i].id;
-            accordionPanel.className = "accordion-collapse collapse" + (i === 0 ? " show" : "");
-            accordionPanel.setAttribute("aria-labelledby", "openAccordionHeading-" + data.nodes[i].id);
+        const accordionPanel = document.createElement("div");
+        accordionPanel.id = "panels-collapse-" + data.nodes[i].id;
+        accordionPanel.className = "accordion-collapse collapse" + (i === 0 ? " show" : "");
+        accordionPanel.setAttribute("aria-labelledby", "openAccordionHeading-" + data.nodes[i].id);
 
-            const accordionBody = document.createElement("div");
-            accordionBody.className = "accordion-body";
-            accordionBody.id = "accordion-body-" + data.nodes[i].id;
+        const accordionBody = document.createElement("div");
+        accordionBody.className = "accordion-body";
+        accordionBody.id = "accordion-body-" + data.nodes[i].id;
 
-            accordion.appendChild(accordionItem);
-            accordionItem.appendChild(accordionHeader);
-            accordionHeader.appendChild(accordionButton);
-            accordionItem.appendChild(accordionPanel);
-            accordionPanel.appendChild(accordionBody);
-        }
+        accordion.appendChild(accordionItem);
+        accordionItem.appendChild(accordionHeader);
+        accordionHeader.appendChild(accordionButton);
+        accordionItem.appendChild(accordionPanel);
+        accordionPanel.appendChild(accordionBody);
 
         for (let j = 0; j < data.nodes.length; j++) {
-            if (document.getElementById("flexCheck" + data.nodes[i].id + "-" + data.nodes[j].id) === null) {
+            if (i !== j) {
                 const formCheck = document.createElement("div");
                 formCheck.className = "form-check";
 
@@ -349,41 +419,138 @@ function renderStep2() {
 
 
 function renderStep3() {
+    // delete anything that existed in step3-container
     const step3 = document.getElementById("step3-container");
-    step3.replaceChildren();
+    const stepTitle = document.createElement("h2");
+    stepTitle.innerHTML = "Input Transition Rates"
+    step3.replaceChildren(stepTitle);
 
+    // loop through all data.links and create input fields for transition rates
     for (let i = 0; i < data.links.length; i++) {
+        // create the link item element
         const linkItem = document.createElement("div");
         linkItem.id = "link-item-" + data.links[i].source.id + "-" + data.links[i].target.id;
 
+        // create the link paragraph (label) element
         const linkPar = document.createElement("p");
         linkPar.innerHTML = "Link from " + data.links[i].source.name + " to " + data.links[i].target.name + ":";
 
+        // create the div to put the input element
         const linkInputGroup = document.createElement("div");
         linkInputGroup.className = "input-group mb-3";
         linkInputGroup.id = "link-input-group-" + data.links[i].source.id + "-" + data.links[i].target.id;
 
+        // create the actual input element
         const linkInput = document.createElement("input");
         linkInput.type = "number";
         linkInput.className = "form-control";
         linkInput.placeholder = "Transition Rate";
         linkInput.ariaLabel = "Transition Rate";
+        linkInput.value = data.links[i].rate ?? '';
 
+        // add an event listener to detect when the user types something in the input
         linkInput.addEventListener('input', updateValue);
-        let inputCreated = false;
 
         function updateValue(e) {
-            console.log(e.target.value);
+            // Find and update the corresponding link
+            data.links[i].rate = e.target.value;
+            // Updating the graph
+            Graph.graphData(data);
         }
 
+        // actually add everything to the DOM and update the graph
         step3.appendChild(linkItem);
         linkItem.appendChild(linkPar);
         linkItem.appendChild(linkInputGroup);
         linkInputGroup.appendChild(linkInput);
+        Graph.graphData(data);
+    }
+}
+
+function step3Next() {
+    // check inputs
+    let emptyText = new Set();
+    for (let i = 0; i < data.links.length; i++) {
+        // check for empty state names
+        if (data.links[i].name.length === 0) {
+            emptyText.add(data.links[i].id);
+        }
+    }
+    const noRate = Array.from(emptyText);
+    for (let i = 0; i < noRate.length; i++) {
+        const element = document.getElementById('s-3-input-' + noRate[i]);
+        element.className += " border border-danger"
+    }
+
+    if (noRate.length === 0 && data.links.length > 0) {
+        step++;
+        const element = document.getElementById("step3-container");
+        element.style.display = "none";
+        renderStep4();
     }
 }
 
 
-
-
 // -------- STEP 4 --------
+
+function renderStep4() {
+    const step4 = document.getElementById("step4-container");
+    step4.replaceChildren();
+    
+    const selectSource = document.createElement("select");
+    selectSource.className = "form-select";
+    selectSource.ariaLabel = "Select Source Node";
+    selectSource.id = "selectSource";
+    
+    const sourceLabel = document.createElement("p");
+    sourceLabel.innerHTML = "Select Source Node:";
+
+    const targetLabel = document.createElement("p");
+    targetLabel.innerHTML = "Select Target Node:";
+    
+    const edgeLabel = document.createElement("p");
+    edgeLabel.innerHTML = "Select Edge Node:";
+    
+    for (let i = 0; i < data.nodes.length; i++) {
+        const option = document.createElement("option");
+        option.value = data.nodes[i].id;
+        option.innerHTML = data.nodes[i].name;  
+        option.id = "select-source-" + data.nodes[i].id;
+        selectSource.appendChild(option);
+    }
+
+    const selectTarget = document.createElement("select");
+    selectTarget.className = "form-select";
+    selectTarget.ariaLabel = "Select Target Node";
+    selectTarget.id = "selectTarget";
+    
+    for (let i = 0; i < data.nodes.length; i++) {
+        const option = document.createElement("option");
+        option.value = data.nodes[i].id;
+        option.innerHTML = data.nodes[i].name;
+        option.id = "select-target-" + data.nodes[i].id;
+        selectTarget.appendChild(option);
+    }
+
+    const selectEdge = document.createElement("select");
+    selectEdge.className = "form-select";
+    selectEdge.ariaLabel = "Select Edge Node";
+    selectEdge.id = "selectEdge";
+    
+    for (let i = 0; i < data.nodes.length; i++) {
+        const option = document.createElement("option");
+        option.value = data.nodes[i].id;
+        option.innerHTML = data.nodes[i].name; 
+        option.id = "select-edge-" + data.nodes[i].id;
+        selectEdge.appendChild(option);
+    }
+
+    step4.appendChild(sourceLabel);
+    step4.appendChild(selectSource);
+    step4.appendChild(targetLabel);
+    step4.appendChild(selectTarget);
+    step4.appendChild(edgeLabel);
+    step4.appendChild(selectEdge);
+    
+    Graph.graphData(data);
+}

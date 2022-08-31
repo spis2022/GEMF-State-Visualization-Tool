@@ -20,14 +20,25 @@
 </head>
 
 <body>
-    <div id="graph"></div>
+    <div id="graphCover">
+        <h1>View Graph Here: </h1>
+        <div id="graph"></div>
+    </div>
     <div id="form">
-        <h1>Form Input</h1>
-        <h2>Add States</h2>
-        <div id="step1-container" class="step-containers"></div>
-        <div id="step2-container" class="step-containers"></div>
-        <div id="step3-container" class="step-containers"></div>
-        <div id="step4-container" class="step-containers"></div>
+        <h1>Input Data Here: </h1>
+        
+        <div id="step1-container" class="step-containers"> 
+            <h2>Add Nodes</h2> 
+        </div>
+        <div id="step2-container" class="step-containers"> 
+            <h2>Add Edges to Nodes</h2> 
+        </div>
+        <div id="step3-container" class="step-containers"> 
+            <h2>Input Node-Based Transition Rates</h2> 
+        </div>
+        <div id="step4-container" class="step-containers">
+            <h2>Input Edge-Based Transition Rates</h2>
+        </div>
         <div id="button-container">
             <button onclick="handleBack()" type="button" class="btn btn-secondary">Back</button>
             <button onclick="handleNext()" type="button" class="btn btn-success">Next</button>
