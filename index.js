@@ -903,7 +903,7 @@ function renderStep5() {
     const step5 = document.getElementById("step5-container");
     const stepTitle = document.createElement("h3");
     stepTitle.className = "title";
-    stepTitle.innerHTML = "State Transition Rates";
+    stepTitle.innerHTML = "Finished State Transition Rates";
     step5.replaceChildren(stepTitle);
 
 
