@@ -65,14 +65,14 @@ body {
     }
     
     #graph {
-        width: 70vw;
+        width: 60vw;
         height: 100vh;
     }
 
     #form {
         border-left: 4px solid black;
         border-top: 0;
-        width: 30vw;
+        width: 40vw;
         height: 100vh;
     }
 }
