@@ -860,6 +860,7 @@ function createEdgeEntry(link) {
         data.links = data.links.filter(l => l.id !== link.id);
         Graph.graphData(data);
         edgeGroup.remove();
+        collapseStyle.parentNode.removeChild(collapseStyle)
     }
 
     const preSource = document.createElement("p");
