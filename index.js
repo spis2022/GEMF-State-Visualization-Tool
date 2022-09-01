@@ -6,7 +6,8 @@ let Graph;
 let inputCounter = 0;
 let data = {
     "nodes": [],
-    "links": []
+    "links": [],
+    "linkCounter": {},
 }
 let step = 1;
 
@@ -19,6 +20,7 @@ window.onload = function() {
 
     graphDiv.onmouseover = () => {
         document.body.style.cursor = "pointer";
+        console.log(data);
     }
 
     graphDiv.onmouseleave = () => {
@@ -57,67 +59,73 @@ window.onload = function() {
         })
         .linkCanvasObject((link, ctx, globalScale) => {
             ctx.lineWidth = 1;
-            const drawArrow = (ctx, x1, y1, x2, y2, t = 0.9) => {
-                const adx = x2 - x1;           // arrow dx
-                const ady = y2 - y1;           // arrow dy
-                const dist = Math.sqrt(adx * adx + ady * ady);
-                const middleX = x2 - ARROW_SIZE * adx / dist;  // shaft end x
-                const middleY = y2 - ARROW_SIZE * ady / dist; // shaft end y
-                const tdx = x2 - middleX;      // tip dx
-                const tdy = y2 - middleY;      // tip dy
-                ctx.beginPath();
-                // ctx.moveTo(middleX + 0.5 * tdy, middleY - 0.5 * tdx);
-                // ctx.lineTo(middleX - 0.5 * tdy, middleY + 0.5 * tdx);
-                // ctx.lineTo(x2, y2);
-                ctx.closePath();
-                ctx.stroke();
-            };
             const source = scaleTriangle(link);
-            ctx.beginPath();
-            ctx.strokeStyle = "black";
-            // ctx.moveTo(source[0], source[1]);
-            // ctx.lineTo(source[2], source[3]);
-            const dx = (source[2] - source[0]) * 0.99;
-            const dy = (source[3] - source[1]) * 0.99;
-            drawArrow(ctx, source[0], source[1], source[0] + dx, source[1] + dy, .9);
-            ctx.fillStyle = "black";
-            ctx.fill();
-            ctx.stroke();
-            ctx.beginPath();
-            if (link.repeated) {
-                // TODO: Make curved verison
+            const dx = (source[2] - source[0]);
+            const dy = (source[3] - source[1]);
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const x99 = (source[2] - source[0]) * 0.99;
+            const y99 = (source[3] - source[1]) * 0.99;
+            const src = Math.min(link.source.id, link.target.id);
+            const tgt = Math.max(link.source.id, link.target.id);
+            const mx = (link.target.x + link.source.x) / 2
+            const my = (link.target.y + link.source.y) / 2
+            let fx = mx;
+            let fy = my;
+            if (data.linkCounter[src + "-" + tgt] === 1) {
+                ctx.beginPath();
+                ctx.strokeStyle = "black";
+                ctx.moveTo(source[0], source[1]);
+                ctx.lineTo(source[2], source[3]);
+                ctx.stroke();
+                drawArrow(ctx, source[0], source[1], source[0] + x99, source[1] + y99, .9);
             } else {
-                const h = Math.sqrt(dx * dx + dy * dy) * 0.2 * (dy < 0 ? 1 : -1);
+                const h = (Math.sqrt(dist) * 2 + (Math.floor((link.repeatCount + 1) / 2) - 1) * NODE_RADIUS * 1.5) * (link.source.id === src ? 1 : -1) * (dy < 0 ? 1 : -1) * (link.repeatCount % 2 === 0 ? 1 : -1);
                 // perpendicular slope
-                const ps = - dx / dy
-                const mx = (link.target.x + link.source.x) / 2
-                const my = (link.target.y + link.source.y) / 2
-                const dfx = h / Math.sqrt(ps*ps + 1)
+                const ps = - x99 / y99
+                const dfx = h / Math.sqrt(ps * ps + 1)
                 const dfy = dfx * ps
-                const fx = dfx + mx;
-                const fy = dfy + my;
+                fx = dfx + mx;
+                fy = dfy + my;
                 const fitCircle = fitCircleToPoints(source[0], source[1], fx, fy, source[2], source[3]);
-                const ang1 = Math.atan2(source[1] - fitCircle.y, source[0]- fitCircle.x);
-                const ang2 = Math.atan2(source[3] - fitCircle.y, source[2]- fitCircle.x);
+                const ang1 = Math.atan2(source[1] - fitCircle.y, source[0] - fitCircle.x);
+                const ang2 = Math.atan2(source[3] - fitCircle.y, source[2] - fitCircle.x);
                 ctx.beginPath();
                 ctx.arc(fitCircle.x, fitCircle.y, fitCircle.radius, ang1, ang2, fitCircle.CCW);
                 ctx.strokeStyle = "black";
                 ctx.stroke();
 
-                ctx.beginPath();
-                ctx.arc(fx, fy, NODE_RADIUS * 0.5, 0, 2 * Math.PI);
-                ctx.strokeStyle = "green";
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                ctx.strokeStyle = "black";
-                ctx.fillStyle = "white";
-                ctx.fill();
-                // // TODO: make global variable
-                // // TODO: font-sizing so that the text fits in the circle
-                ctx.fillStyle = "black";
-                ctx.font = "bold 4px sans-serif";
-                ctx.fillText(link.rate ?? "", fx, fy);
+                const rdx = source[2] - fitCircle.x
+                const rdy = source[3] - fitCircle.y
+                // slope
+                const rm = rdy / rdx
+                // perp of rm
+                const prm = - rdx / rdy
+                let flip = 1;
+                if ((link.repeatCount % 2 === 0 && link.source.id === src) || (link.repeatCount % 2 === 1 && link.source.id === tgt)) {
+                    flip = -1;
+                }
+                const arrdfx = - dist / Math.sqrt(prm * prm + 1) * (rdy > 0 ? -1 : 1) * flip;
+                const arrdfy = arrdfx * prm
+                const arrfx = arrdfx + source[2]
+                const arrfy = arrdfy + source[3]
+                drawArrow(ctx, arrfx, arrfy, source[2], source[3], .9);
             }
+
+
+            // draw rate label circle
+            ctx.beginPath();
+            ctx.arc(fx, fy, NODE_RADIUS * 0.5, 0, 2 * Math.PI);
+            ctx.strokeStyle = link.inducer === undefined ? "green" : "red";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.strokeStyle = "black";
+            ctx.fillStyle = "white";
+            ctx.fill();
+            // // TODO: make global variable
+            // // TODO: font-sizing so that the text fits in the circle
+            ctx.fillStyle = "black";
+            ctx.font = "bold 4px sans-serif";
+            ctx.fillText((link.rate === undefined ? "" : link.rate) + (link.inducer === undefined ? "" : (", " + data.nodes.find(node => node.id === link.inducer).name)), fx, fy);
         })
         .onNodeHover((node) => {
             if (node === null) {
@@ -135,21 +143,21 @@ window.onload = function() {
         var x, y, u;
         const slopeA = (x2 - x1) / (y1 - y2); // slope of vector from point 1 to 2
         const slopeB = (x3 - x2) / (y2 - y3); // slope of vector from point 2 to 3
-        if (slopeA === slopeB)  { return } // Slopes are same thus 3 points form striaght line. No circle can fit.
-        if(y1 === y2){   // special case with points 1 and 2 have same y 
+        if (slopeA === slopeB) { return } // Slopes are same thus 3 points form striaght line. No circle can fit.
+        if (y1 === y2) {   // special case with points 1 and 2 have same y 
             x = ((x1 + x2) / 2);
-            y = slopeB * x + (((y2 + y3) / 2) - slopeB * ((x2 + x3) / 2));  
-        }else
-        if(y2 === y3){ // special case with points 2 and 3 have same y 
-            x = ((x2 + x3) / 2);
-            y = slopeA * x + (((y1 + y2) / 2) - slopeA * ((x1 + x2) / 2));  
-        } else{
-            x = ((((y2 + y3) / 2) - slopeB * ((x2 + x3) / 2)) - (u = ((y1 + y2) / 2) - slopeA * ((x1 + x2) / 2))) / (slopeA - slopeB);
-            y = slopeA * x + u;
-        }
-        
+            y = slopeB * x + (((y2 + y3) / 2) - slopeB * ((x2 + x3) / 2));
+        } else
+            if (y2 === y3) { // special case with points 2 and 3 have same y 
+                x = ((x2 + x3) / 2);
+                y = slopeA * x + (((y1 + y2) / 2) - slopeA * ((x1 + x2) / 2));
+            } else {
+                x = ((((y2 + y3) / 2) - slopeB * ((x2 + x3) / 2)) - (u = ((y1 + y2) / 2) - slopeA * ((x1 + x2) / 2))) / (slopeA - slopeB);
+                y = slopeA * x + u;
+            }
+
         return {
-            x, y, 
+            x, y,
             radius: ((x1 - x) ** 2 + (y1 - y) ** 2) ** 0.5,
             CCW: ((x3 - x1) * (y2 - y1) - (y3 - y1) * (x2 - x1)) >= 0,
         };
@@ -163,6 +171,24 @@ window.onload = function() {
         const x_i = ((NODE_RADIUS * d_x) / d);
         return [x_i + link.source.x, y_i + link.source.y, -x_i + link.target.x, -y_i + link.target.y];
     }
+
+    function drawArrow(ctx, x1, y1, x2, y2, t = 0.9) {
+        const adx = x2 - x1;           // arrow dx
+        const ady = y2 - y1;           // arrow dy
+        const dist = Math.sqrt(adx * adx + ady * ady);
+        const middleX = x2 - ARROW_SIZE * adx / dist;  // shaft end x
+        const middleY = y2 - ARROW_SIZE * ady / dist; // shaft end y
+        const tdx = x2 - middleX;      // tip dx
+        const tdy = y2 - middleY;      // tip dy
+        ctx.beginPath();
+        ctx.moveTo(middleX + 0.5 * tdy, middleY - 0.5 * tdx);
+        ctx.lineTo(middleX - 0.5 * tdy, middleY + 0.5 * tdx);
+        ctx.lineTo(x2, y2);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.fillStyle = "black";
+        ctx.fill();
+    };
 
     const step1 = document.getElementById("step1-container");
     step1.style.display = "flex";
@@ -188,7 +214,9 @@ function handleNext() {
         step2.style.display = "none";
         step3.style.display = "flex";
         formTitle.innerHTML = "Data Input (Step 3)"
+        console.log(data.links.filter(link => link.inducer === undefined));
         if (data.links.filter(link => link.inducer === undefined).length === 0) {
+            console.log("hit")
             handleNext();
         } else {
             renderStep3();
@@ -235,7 +263,6 @@ function handleBack() {
         const step5 = document.getElementById("step5-container");
         step4.style.display = "flex";
         step5.style.display = "none";
-        handleBack();
     }
 
     const formTitle = document.getElementById("formTitle");
@@ -446,8 +473,6 @@ function renderStep2() {
                 formCheck.className = "form-check";
 
                 const link = data.links.find(obj => obj.source.id === data.nodes[i].id && obj.target.id === data.nodes[j].id)
-                let repeatedLink = data.links.find(obj => obj.source.id === data.nodes[j].id && obj.target.id === data.nodes[i].id)
-                console.log(repeatedLink);
 
                 const input = document.createElement("input");
                 input.className = "form-check-input";
@@ -457,25 +482,25 @@ function renderStep2() {
                 if (link !== undefined) {
                     input.checked = true;
                 }
+                let src = Math.min(data.nodes[i].id, data.nodes[j].id);
+                let tgt = Math.max(data.nodes[i].id, data.nodes[j].id);
                 input.onclick = function() {
-                    repeatedLink = data.links.find(obj => obj.source.id === data.nodes[j].id && obj.target.id === data.nodes[i].id)
-
                     if (input.checked) {
+                        if (data.linkCounter[src + "-" + tgt] === undefined) {
+                            data.linkCounter[src + "-" + tgt] = 1;
+                        } else {
+                            data.linkCounter[src + "-" + tgt]++;
+                        }
                         data.links.push({
+                            id: data.nodes[i].id + "-" + data.nodes[j].id,
                             source: data.nodes[i].id,
                             target: data.nodes[j].id,
-                            repeated: repeatedLink !== undefined
+                            repeatCount: data.linkCounter[src + "-" + tgt]
                         })
-                        if (repeatedLink !== undefined) {
-                            repeatedLink.repeated = true;
-                        }
                     } else {
                         data.links = data.links.filter(link => !(link.source.id === data.nodes[i].id && link.target.id === data.nodes[j].id));
-                        if (repeatedLink !== undefined) {
-                            repeatedLink.repeated = false;
-                        }
+                        data.linkCounter[src + "-" + tgt]--;
                     }
-                    console.log(data.links);
                     Graph.graphData(data);
                 }
 
@@ -556,11 +581,13 @@ function step3Next() {
     // check inputs
     let valid = true;
     for (let i = 0; i < data.links.length; i++) {
-        const input = document.getElementById("link-input-" + data.links[i].source.id + "-" + data.links[i].target.id);
-        if (data.links[i].rate === undefined || input.value.length === 0) {
-            data.links[i].rate = undefined;
-            valid = false;
-            input.className += " border border-danger"
+        if (data.links[i].inducer === undefined) {
+            const input = document.getElementById("link-input-" + data.links[i].source.id + "-" + data.links[i].target.id);
+            if (data.links[i].rate === undefined || input.value.length === 0) {
+                data.links[i].rate = undefined;
+                valid = false;
+                input.className += " border border-danger"
+            }
         }
     }
 
@@ -650,6 +677,7 @@ function renderStep4() {
 
     rateInputGroup.appendChild(rateInput);
 
+    let addButtonCounter = 0;
     const addButton = document.createElement("button");
     addButton.className = "btn btn-success";
     addButton.innerHTML = "Add";
@@ -661,6 +689,7 @@ function renderStep4() {
             selectSource.className += " border border-danger";
             selectTarget.className += " border border-danger";
         } else {
+            addButtonCounter++;
             selectSource.classList.remove("border");
             selectSource.classList.remove("border-danger");
             selectTarget.classList.remove("border");
@@ -677,73 +706,25 @@ function renderStep4() {
 
 
         if (valid && data.links.find(link => link.source.id === parseInt(selectSource.value) && link.target.id === parseInt(selectTarget.value) && link.inducer === parseInt(selectInducer.value)) === undefined) {
-            console.log(data.links);
             // TODO: show alert when tries to add an existing link
+            const src = Math.min(selectSource.value, selectTarget.value);
+            const tgt = Math.max(selectSource.value, selectTarget.value);
+            if (data.linkCounter[src + "-" + tgt] === undefined) {
+                data.linkCounter[src + "-" + tgt] = 1;
+            } else {
+                data.linkCounter[src + "-" + tgt]++;
+            }
             data.links.push({
+                id: selectSource.value + "-" + selectTarget.value + "-" + selectInducer.value,
+                shortName: selectSource.options[selectSource.selectedIndex].text[0] + "-" + selectTarget.options[selectTarget.selectedIndex].text[0] + ", " + selectInducer.options[selectInducer.selectedIndex].text[0],
                 source: parseInt(selectSource.value),
                 target: parseInt(selectTarget.value),
                 inducer: parseInt(selectInducer.value),
-                rate: rateInput.value
+                rate: rateInput.value,
+                repeatCount: data.linkCounter[src + "-" + tgt]
             })
-            const edgeGroup = document.createElement("div");
-            edgeGroup.style.display = "flex";
-            edgeGroup.style.justifyContent = "space-between";
-            edgeGroup.className = "mb-3 w-100";
-            
-            
-            const displaySource = document.createElement("input");           
-            displaySource.className = "form-control";
-            displaySource.type = "text";
-            displaySource.value = selectSource.options[selectSource.selectedIndex].text;
-            displaySource.ariaLabel = "Disabled input example";
- 
 
-            const displayTarget = document.createElement("input");           
-            displayTarget.className = "form-control";
-            displayTarget.type = "text";
-            displayTarget.value = selectTarget.options[selectTarget.selectedIndex].text;
-            displayTarget.ariaLabel = "Disabled input example";
-        
-
-            const displayInducer = document.createElement("input");           
-            displayInducer.className = "form-control";
-            displayInducer.type = "text";
-            displayInducer.value = selectInducer.options[selectInducer.selectedIndex].text;
-            displayInducer.ariaLabel = "Disabled input example";
-            
-
-            const displayRate = document.createElement("input");           
-            displayRate.className = "form-control";
-            displayRate.type = "text";
-            displayRate.value = rateInput.value;
-            displayRate.ariaLabel = "Disabled input example";
-            displayRate.innerHTML = rateInput.value;
-
-            const deleteButton = document.createElement("button");
-            deleteButton.className = "btn btn-danger";
-            deleteButton.innerHTML = "X";
-            deleteButton.style.width = "15%";
-            deleteButton.onclick = () => {
-            }
-
-            const sourceDivider = document.createElement("p");
-            sourceDivider.innerHTML = " ⟶ ";
-            const targetDivider = document.createElement("p");
-            targetDivider.innerHTML = "Inducer: ";
-            const inducerDivider = document.createElement("p");
-            inducerDivider.innerHTML = "Rate: ";
-
-
-            step4.appendChild(edgeGroup);
-            edgeGroup.appendChild(displaySource);
-            edgeGroup.appendChild(sourceDivider);
-            edgeGroup.appendChild(displayTarget);
-            edgeGroup.appendChild(targetDivider);
-            edgeGroup.appendChild(displayInducer);
-            edgeGroup.appendChild(inducerDivider);
-            edgeGroup.appendChild(displayRate);
-            edgeGroup.appendChild(deleteButton);
-            Graph.graphData(data);
+            createEdgeEntry(data.links[data.links.length - 1])
         }
 
 
@@ -759,8 +740,162 @@ function renderStep4() {
     step4.appendChild(inducerLabel);
     step4.appendChild(selectInducer);
     step4.appendChild(rateAndAddContainer);
-    
 
+    for (let i = 0; i < data.links.length; i++) {
+        if (data.links[i].inducer !== undefined) {
+            createEdgeEntry(data.links[i]);
+        }
+    }
+    
+    Graph.graphData(data);
+}
+
+function createEdgeEntry(link) {
+    const edgeGroup = document.createElement("div");
+    edgeGroup.style.display = "flex";
+    edgeGroup.style.flexWrap = "wrap";
+    edgeGroup.style.justifyContent = "space-between";
+    edgeGroup.className = "mt-3 mb-3 w-100";
+
+    const collapseBttnDiv = document.createElement("div");
+    collapseBttnDiv.style.width = "60%";
+    const collapseBttn = document.createElement("button");
+    collapseBttn.className = "btn btn-primary mb-3 w-100";
+    collapseBttn.type = "button"
+    collapseBttn.setAttribute("data-bs-toggle", "collapse");
+    collapseBttn.setAttribute("data-bs-target", "#collapseWidthExample");
+    collapseBttn.setAttribute("aria-controls", "collapseWidthExample");
+    collapseBttn.ariaExpanded = "false";
+    collapseBttn.innerHTML = "State Transition Edge " + link.shortName;
+    const collapseStyle = document.createElement("div");
+    collapseStyle.style.minHeight = "120px;"
+    const collapse = document.createElement("div");
+    collapse.className = "collapse";
+    collapse.id = "collapseWidthExample";
+    const collapseBody = document.createElement("div");
+    collapseBody.className = "card card-body w-100";
+    collapseBody.style;
+
+    const displaySource = document.createElement("input");
+    displaySource.className = "form-control mb-3";
+    displaySource.type = "text";
+    displaySource.value = link.source.name;
+    displaySource.ariaLabel = "Disabled input example";
+    displaySource.disabled = true;
+    displaySource.readOnly = true;
+    displaySource.style.width = "30%";
+
+    const displayTarget = document.createElement("input");
+    displayTarget.className = "form-control mb-3";
+    displayTarget.type = "text";
+    displayTarget.value = link.target.name;
+    displayTarget.ariaLabel = "Disabled input example";
+    displayTarget.disabled = true;
+    displayTarget.readOnly = true;
+    displayTarget.style.width = "30%";
+
+    const displayInducer = document.createElement("input");
+    displayInducer.className = "form-control mb-3";
+    displayInducer.type = "text";
+    displayInducer.value = data.links.find(l => l.id === link.inducer);
+    displayInducer.ariaLabel = "Disabled input example";
+    displayInducer.disabled = true;
+    displayInducer.readOnly = true;
+    displayInducer.style.width = "25%";
+
+    const displayRate = document.createElement("input");
+    displayRate.className = "form-control";
+    displayRate.type = "text";
+    displayRate.value = link.rate;
+    displayRate.ariaLabel = "Disabled input example";
+    displayRate.innerHTML = link.rate;
+    displayRate.disabled = true;
+    displayRate.readOnly = true;
+    displayRate.style.width = "20%";
+
+    //Icons
+    const trash = document.createElement("i");
+    trash.className = "bi bi-trash";
+    const pen = document.createElement("i");
+    pen.className = "bi bi-pen";
+    const arrow = document.createElement("i");
+    arrow.className = "bi bi-arrow-right";
+    const checkmark = document.createElement("i");
+    checkmark.className = "bi bi-check-lg";
+
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "btn btn-danger p-0 mb-3";
+    deleteButton.appendChild(trash);
+    deleteButton.style.width = "10%";
+    deleteButton.onclick = () => {
+        edgeGroup.remove();
+    }
+
+    const preSource = document.createElement("p");
+    preSource.innerHTML = "Source: ";
+    const sourceDivider = document.createElement("p");
+    sourceDivider.innerHTML = "Target: ";
+    const targetDivider = document.createElement("p");
+    targetDivider.innerHTML = "Inducer: ";
+    const inducerDivider = document.createElement("p");
+    inducerDivider.innerHTML = "Rate: ";
+
+    const editButton = document.createElement("button");
+    editButton.className = "btn btn-secondary p-0 mb-3";
+    editButton.appendChild(pen);
+    editButton.style.width = "10%";
+    let editing = false;
+    editButton.onclick = () => {
+        if (!editing) {
+            editing = true;
+            //TODO: make tab collapse when edit button is clicked
+            displaySource.disabled = false;
+            displaySource.readOnly = false;
+            displayTarget.disabled = false;
+            displayTarget.readOnly = false;
+            displayInducer.disabled = false;
+            displayInducer.readOnly = false;
+            displayRate.disabled = false;
+            displayRate.readOnly = false;
+            // add save changes or green check box and cancel button?
+            const saveButton = document.createElement("button");
+            saveButton.className = "btn btn-success";
+            saveButton.appendChild(checkmark);
+            saveButton.style.width = "15%";
+            collapseBody.appendChild(saveButton);
+            saveButton.onclick = () => {
+                displaySource.disabled = true;
+                displaySource.readOnly = true;
+                displayTarget.disabled = true;
+                displayTarget.readOnly = true;
+                displayInducer.disabled = true;
+                displayInducer.readOnly = true;
+                displayRate.disabled = true;
+                displayRate.readOnly = true;
+                editing = false;
+                collapseBody.removeChild(saveButton);
+            }
+        }
+    }
+
+    const step4 = document.getElementById("step4-container");
+
+    step4.appendChild(edgeGroup);
+    edgeGroup.appendChild(collapseBttnDiv);
+    collapseBttnDiv.appendChild(collapseBttn);
+    collapseStyle.appendChild(collapse);
+    collapse.appendChild(collapseBody);
+    collapseBody.appendChild(preSource);
+    collapseBody.appendChild(displaySource);
+    collapseBody.appendChild(sourceDivider);
+    collapseBody.appendChild(displayTarget);
+    collapseBody.appendChild(targetDivider);
+    collapseBody.appendChild(displayInducer);
+    collapseBody.appendChild(inducerDivider);
+    collapseBody.appendChild(displayRate);
+    // edgeGroup.appendChild(editButton);
+    edgeGroup.appendChild(deleteButton);
+    step4.appendChild(collapseStyle);
     Graph.graphData(data);
 }
 
@@ -771,17 +906,51 @@ function renderStep5() {
     stepTitle.innerHTML = "State Transition Rates";
     step5.replaceChildren(stepTitle);
 
+
+    const fileText = document.createElement("textarea");
+    fileText.id = "text";
+
     for (let i = 0; i < data.links.length; i++) {
         const fromState = data.links[i].source.name;
         const toState = data.links[i].target.name;
         let inducerState = "None";
         if (data.links[i].inducer !== undefined) {
-            inducerState = data.links[i].inducer.name;
+            inducerState = data.nodes.find(node => node.id === data.links[i].inducer).name;
         }
         const rate = data.links[i].rate;
-
         const text = document.createElement("p");
-        text.innerHTML = fromState + "&#09;" + toState + "&#09;" + inducerState + "&#09;" + rate;
+        text.innerHTML = fromState + "&emsp;" + toState + "&emsp;" + inducerState + "&emsp;" + rate;
+
+        fileText.innerHTML += fromState + "&#09;" + toState + "&#09;" + inducerState + "&#09;" + rate + "&#10";
         step5.appendChild(text);
+        step5.appendChild(fileText);
+        fileText.style.display = "none";
     }
+
+    const downloadButton = document.createElement("button");
+    downloadButton.className = "btn btn-primary";
+    downloadButton.id = "btn"
+    downloadButton.innerHTML = "Download";
+    downloadButton.onclick = () => {
+        const text = document.getElementById("text").value;
+        download("str.tsv", text);
+    }
+
+    function download(filename, text) {
+        var element = document.createElement('a');
+        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+        element.setAttribute('download', filename);
+
+        element.style.display = 'none';
+        document.body.appendChild(element);
+
+        element.click();
+
+        document.body.removeChild(element);
+    }
+
+
+    step5.appendChild(downloadButton);
+
+    Graph.graphData(data);
 }
