@@ -18,13 +18,21 @@ window.onload = function() {
 
     const graphIndicator = document.getElementById('graphIndicator')
 
-    graphIndicator.onclick = () => {
+    graphIndicator.onmousedown = () => {
         graphIndicator.style.opacity = 0;
         setTimeout(() => {
             graphIndicator.style.display = "none";
         }, 500)
     }
 
+    graphIndicator.ontouchstart = () => {
+        graphIndicator.style.opacity = 0;
+        setTimeout(() => {
+            graphIndicator.style.display = "none";
+        }, 500)
+    }
+
+    
     const graphDiv = document.getElementById('graph')
 
     graphDiv.onmouseover = () => {
@@ -233,7 +241,6 @@ function handleNext() {
     } else if (step === 3) {
         step3Next();
     } else if (step === 4) {
-        //step3Next();
         step++;
         const step4 = document.getElementById("step4-container");
         const step5 = document.getElementById("step5-container");
@@ -837,6 +844,11 @@ function createEdgeEntry(link) {
     deleteButton.appendChild(trash);
     deleteButton.style.width = "10%";
     deleteButton.onclick = () => {
+        const src = Math.min(link.source.id, link.target.id);
+        const tgt = Math.max(link.source.id, link.target.id);
+        data.linkCounter[src + "-" + tgt]--;
+        data.links = data.links.filter(l => l.id !== link.id);
+        Graph.graphData(data);
         edgeGroup.remove();
     }
 
