@@ -57,9 +57,6 @@ window.onload = function() {
         })
         .linkCanvasObject((link, ctx, globalScale) => {
             ctx.lineWidth = 1;
-            const curveRadius = 2 * NODE_RADIUS;
-            const curveX = link.target.x + NODE_RADIUS / 2 / Math.sin(Math.PI / 4);
-            const curveY = link.target.y - NODE_RADIUS / 2 / Math.sin(Math.PI / 4);
             const drawArrow = (ctx, x1, y1, x2, y2, t = 0.9) => {
                 const adx = x2 - x1;           // arrow dx
                 const ady = y2 - y1;           // arrow dy
@@ -69,11 +66,9 @@ window.onload = function() {
                 const tdx = x2 - middleX;      // tip dx
                 const tdy = y2 - middleY;      // tip dy
                 ctx.beginPath();
-                ctx.moveTo(x1, y1);
-                ctx.lineTo(middleX, middleY);
-                ctx.moveTo(middleX + 0.5 * tdy, middleY - 0.5 * tdx);
-                ctx.lineTo(middleX - 0.5 * tdy, middleY + 0.5 * tdx);
-                ctx.lineTo(x2, y2);
+                // ctx.moveTo(middleX + 0.5 * tdy, middleY - 0.5 * tdx);
+                // ctx.lineTo(middleX - 0.5 * tdy, middleY + 0.5 * tdx);
+                // ctx.lineTo(x2, y2);
                 ctx.closePath();
                 ctx.stroke();
             };
@@ -92,16 +87,36 @@ window.onload = function() {
             if (link.repeated) {
                 // TODO: Make curved verison
             } else {
-                ctx.arc((link.target.x + link.source.x) / 2, (link.target.y + link.source.y) / 2, NODE_RADIUS * 0.5, 0, 2 * Math.PI);
+                const h = Math.sqrt(dx * dx + dy * dy) * 0.2 * (dy < 0 ? 1 : -1);
+                // perpendicular slope
+                const ps = - dx / dy
+                const mx = (link.target.x + link.source.x) / 2
+                const my = (link.target.y + link.source.y) / 2
+                const dfx = h / Math.sqrt(ps*ps + 1)
+                const dfy = dfx * ps
+                const fx = dfx + mx;
+                const fy = dfy + my;
+                const fitCircle = fitCircleToPoints(source[0], source[1], fx, fy, source[2], source[3]);
+                const ang1 = Math.atan2(source[1] - fitCircle.y, source[0]- fitCircle.x);
+                const ang2 = Math.atan2(source[3] - fitCircle.y, source[2]- fitCircle.x);
+                ctx.beginPath();
+                ctx.arc(fitCircle.x, fitCircle.y, fitCircle.radius, ang1, ang2, fitCircle.CCW);
+                ctx.strokeStyle = "black";
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(fx, fy, NODE_RADIUS * 0.5, 0, 2 * Math.PI);
+                ctx.strokeStyle = "green";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.strokeStyle = "black";
                 ctx.fillStyle = "white";
                 ctx.fill();
-                ctx.strokeStyle = "green";
-                ctx.stroke();
-                // TODO: make global variable
-                // TODO: font-sizing so that the text fits in the circle
+                // // TODO: make global variable
+                // // TODO: font-sizing so that the text fits in the circle
                 ctx.fillStyle = "black";
                 ctx.font = "bold 4px sans-serif";
-                ctx.fillText(link.rate ?? "", (link.target.x + link.source.x) / 2, (link.target.y + link.source.y) / 2);
+                ctx.fillText(link.rate ?? "", fx, fy);
             }
         })
         .onNodeHover((node) => {
@@ -116,6 +131,29 @@ window.onload = function() {
         .d3Force('collide', d3.forceCollide(NODE_RADIUS / 2))
         .d3Force('link', null)
 
+    function fitCircleToPoints(x1, y1, x2, y2, x3, y3) {
+        var x, y, u;
+        const slopeA = (x2 - x1) / (y1 - y2); // slope of vector from point 1 to 2
+        const slopeB = (x3 - x2) / (y2 - y3); // slope of vector from point 2 to 3
+        if (slopeA === slopeB)  { return } // Slopes are same thus 3 points form striaght line. No circle can fit.
+        if(y1 === y2){   // special case with points 1 and 2 have same y 
+            x = ((x1 + x2) / 2);
+            y = slopeB * x + (((y2 + y3) / 2) - slopeB * ((x2 + x3) / 2));  
+        }else
+        if(y2 === y3){ // special case with points 2 and 3 have same y 
+            x = ((x2 + x3) / 2);
+            y = slopeA * x + (((y1 + y2) / 2) - slopeA * ((x1 + x2) / 2));  
+        } else{
+            x = ((((y2 + y3) / 2) - slopeB * ((x2 + x3) / 2)) - (u = ((y1 + y2) / 2) - slopeA * ((x1 + x2) / 2))) / (slopeA - slopeB);
+            y = slopeA * x + u;
+        }
+        
+        return {
+            x, y, 
+            radius: ((x1 - x) ** 2 + (y1 - y) ** 2) ** 0.5,
+            CCW: ((x3 - x1) * (y2 - y1) - (y3 - y1) * (x2 - x1)) >= 0,
+        };
+    }
 
     function scaleTriangle(link) {
         const d = Math.sqrt((Math.pow(link.target.x - link.source.x, 2) + Math.pow(link.target.y - link.source.y, 2)))
