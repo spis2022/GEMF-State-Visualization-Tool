@@ -767,6 +767,7 @@ function renderStep4() {
 }
 
 function createEdgeEntry(link) {
+    console.log(link);
     const edgeGroup = document.createElement("div");
     edgeGroup.style.display = "flex";
     edgeGroup.style.flexWrap = "wrap";
@@ -795,7 +796,12 @@ function createEdgeEntry(link) {
     const displaySource = document.createElement("input");
     displaySource.className = "form-control mb-3";
     displaySource.type = "text";
-    displaySource.value = link.source.name;
+    if (typeof link.source === 'number') {
+        displaySource.value = data.nodes.find(n => n.id === link.source).name;
+    } else {
+        displaySource.value = link.source.name;
+    }
+    
     displaySource.ariaLabel = "Disabled input example";
     displaySource.disabled = true;
     displaySource.readOnly = true;
@@ -804,7 +810,11 @@ function createEdgeEntry(link) {
     const displayTarget = document.createElement("input");
     displayTarget.className = "form-control mb-3";
     displayTarget.type = "text";
-    displayTarget.value = link.target.name;
+    if (typeof link.target === 'number') {
+        displayTarget.value = data.nodes.find(n => n.id === link.target).name;
+    } else {
+        displayTarget.value = link.target.name;
+    }
     displayTarget.ariaLabel = "Disabled input example";
     displayTarget.disabled = true;
     displayTarget.readOnly = true;
@@ -813,7 +823,7 @@ function createEdgeEntry(link) {
     const displayInducer = document.createElement("input");
     displayInducer.className = "form-control mb-3";
     displayInducer.type = "text";
-    displayInducer.value = data.links.find(l => l.id === link.inducer);
+    displayInducer.value = data.nodes.find(n => n.id === link.inducer).name;
     displayInducer.ariaLabel = "Disabled input example";
     displayInducer.disabled = true;
     displayInducer.readOnly = true;
