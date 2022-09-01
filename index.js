@@ -16,6 +16,15 @@ let step = 1;
 window.onload = function() {
     createNewInput();
 
+    const graphIndicator = document.getElementById('graphIndicator')
+
+    graphIndicator.onclick = () => {
+        graphIndicator.style.opacity = 0;
+        setTimeout(() => {
+            graphIndicator.style.display = "none";
+        }, 500)
+    }
+
     const graphDiv = document.getElementById('graph')
 
     graphDiv.onmouseover = () => {
@@ -746,7 +755,7 @@ function renderStep4() {
             createEdgeEntry(data.links[i]);
         }
     }
-    
+
     Graph.graphData(data);
 }
 

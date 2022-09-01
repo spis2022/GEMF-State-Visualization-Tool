@@ -23,6 +23,34 @@ body {
     margin: 2vw;
 }
 
+#graphCover p {
+    position: absolute;
+    bottom: 40vh;
+    right: 0;
+    padding: 2vw;
+    margin: 0;
+    font-weight: bold;
+}
+
+#graphIndicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 60vh;
+    width: 100vw;
+    background-color: rgba(0, 0, 0, 0.25);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    z-index: 100;
+    transition: 0.5s;
+}
+
+#graphIndicator:hover {
+    background-color: rgba(0, 0, 0, 0.15);
+}
+
 #form {
     display: flex;
     flex-direction: column;
@@ -69,6 +97,16 @@ body {
         height: 100vh;
     }
 
+    #graphCover p {
+        bottom: 0;
+        right: 40vw;
+    }
+
+    #graphIndicator {
+        height: 100vh;
+        width: 60vw;
+    }
+
     #form {
         border-left: 4px solid black;
         border-top: 0;
@@ -77,3 +115,12 @@ body {
     }
 }
 
+.noselect {
+  -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Old versions of Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome, Edge, Opera and Firefox */
+}

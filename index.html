@@ -17,8 +17,7 @@
     <meta property="og:title" content="GEMF Visualization Tool">
     <meta property="og:description"
         content="State Visualization Tool for Dr. Niema Moshiri's GEMF_FAVITES.py Epidemic Simulator, SPIS 2022, Daniel Ji and Vicky Tang">
-    <meta property="og:image"
-        content="https://spis2022.github.io/GEMF-State-Visualization-Tool/preview.png">
+    <meta property="og:image" content="https://spis2022.github.io/GEMF-State-Visualization-Tool/preview.png">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
@@ -26,8 +25,7 @@
     <meta property="twitter:title" content="GEMF Visualization Tool">
     <meta property="twitter:description"
         content="State Visualization Tool for Dr. Niema Moshiri's GEMF_FAVITES.py Epidemic Simulator, SPIS 2022, Daniel Ji and Vicky Tang">
-    <meta property="twitter:image"
-        content="https://spis2022.github.io/GEMF-State-Visualization-Tool/preview.png">
+    <meta property="twitter:image" content="https://spis2022.github.io/GEMF-State-Visualization-Tool/preview.png">
 
     <title>replit</title>
     <link href="style.css" rel="stylesheet" type="text/css" />
@@ -46,8 +44,16 @@
 </head>
 
 <body>
+    <div id="graphIndicator">
+        <p class="noselect">Click and Drag Graph to Interact</p>
+    </div>
     <div id="graphCover">
         <h1>Graph View </h1>
+        <p>
+            Legend:<br>
+            <span style="color: green">Green</span> Edges: Node-based Transition<br>
+            <span style="color: red">Red</span> Edges: Edge-based Transition
+        </p>
         <div id="graph"></div>
     </div>
     <div id="form">
