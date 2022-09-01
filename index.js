@@ -36,7 +36,7 @@ window.onload = function() {
         .nodeAutoColorBy('group')
         .linkSource('source')
         .linkTarget('target')
-        .width(window.innerWidth >= 768 ? window.innerWidth * .7 : window.innerWidth)
+        .width(window.innerWidth >= 768 ? window.innerWidth * .6 : window.innerWidth)
         .height(window.innerWidth >= 768 ? window.innerHeight : window.innerHeight * 0.6)
         .maxZoom(5)
         .minZoom(1)
@@ -636,6 +636,7 @@ function renderStep4() {
     const rateAndAddContainer = document.createElement("div");
     rateAndAddContainer.style.display = "flex";
     rateAndAddContainer.style.justifyContent = "space-between";
+    rateAndAddContainer.className = "mb-3";
 
     const rateInputGroup = document.createElement("div");
     rateInputGroup.className = "input-group";
@@ -684,14 +685,64 @@ function renderStep4() {
                 inducer: parseInt(selectInducer.value),
                 rate: rateInput.value
             })
-            const edge = document.createElement("div");
-            edge.innerHTML = selectSource.value + selectTarget.value + selectInducer.value + rateInput.value;
+            const edgeGroup = document.createElement("div");
+            edgeGroup.style.display = "flex";
+            edgeGroup.style.justifyContent = "space-between";
+            edgeGroup.className = "mb-3 w-100";
+            
+            
+            const displaySource = document.createElement("input");           
+            displaySource.className = "form-control";
+            displaySource.type = "text";
+            displaySource.value = selectSource.options[selectSource.selectedIndex].text;
+            displaySource.ariaLabel = "Disabled input example";
+ 
+
+            const displayTarget = document.createElement("input");           
+            displayTarget.className = "form-control";
+            displayTarget.type = "text";
+            displayTarget.value = selectTarget.options[selectTarget.selectedIndex].text;
+            displayTarget.ariaLabel = "Disabled input example";
+        
+
+            const displayInducer = document.createElement("input");           
+            displayInducer.className = "form-control";
+            displayInducer.type = "text";
+            displayInducer.value = selectInducer.options[selectInducer.selectedIndex].text;
+            displayInducer.ariaLabel = "Disabled input example";
+            
+
+            const displayRate = document.createElement("input");           
+            displayRate.className = "form-control";
+            displayRate.type = "text";
+            displayRate.value = rateInput.value;
+            displayRate.ariaLabel = "Disabled input example";
+            displayRate.innerHTML = rateInput.value;
+
             const deleteButton = document.createElement("button");
             deleteButton.className = "btn btn-danger";
             deleteButton.innerHTML = "X";
-            deleteButton.style.width = "25%";
+            deleteButton.style.width = "15%";
             deleteButton.onclick = () => {
             }
+
+            const sourceDivider = document.createElement("p");
+            sourceDivider.innerHTML = " ⟶ ";
+            const targetDivider = document.createElement("p");
+            targetDivider.innerHTML = "Inducer: ";
+            const inducerDivider = document.createElement("p");
+            inducerDivider.innerHTML = "Rate: ";
+
+
+            step4.appendChild(edgeGroup);
+            edgeGroup.appendChild(displaySource);
+            edgeGroup.appendChild(sourceDivider);
+            edgeGroup.appendChild(displayTarget);
+            edgeGroup.appendChild(targetDivider);
+            edgeGroup.appendChild(displayInducer);
+            edgeGroup.appendChild(inducerDivider);
+            edgeGroup.appendChild(displayRate);
+            edgeGroup.appendChild(deleteButton);
             Graph.graphData(data);
         }
 
@@ -708,7 +759,7 @@ function renderStep4() {
     step4.appendChild(inducerLabel);
     step4.appendChild(selectInducer);
     step4.appendChild(rateAndAddContainer);
-    step4.appendChild(edge);
+    
 
     Graph.graphData(data);
 }
