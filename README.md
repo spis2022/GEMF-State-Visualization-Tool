@@ -1,4 +1,4 @@
-State Visualization Tool for Dr. Niema Moshiri's GEMF_FAVITES.py Epidemic Simulator, SPIS 2022
+State Visualization Tool for Dr. Niema Moshiri's GEMF_FAVITES.py (GENERALIZED EPIDEMIC MODELING FRAMEWORK), SPIS 2022
 
 Created by Daniel Ji and Vicky Tang
 
