@@ -32,6 +32,23 @@ body {
     font-weight: bold;
 }
 
+#graphCover a {
+    position: absolute;
+    top: 0;
+    right: 0;
+    margin: 0.5vw;
+    height: auto;
+}
+
+#graphCover a img {
+    width: max(5vw, 40px);
+}
+
+#graphCover a button:hover {
+    background-color: rgb(220, 220, 220) !important;
+    border-color: black !important;
+}
+
 #graphIndicator {
     position: absolute;
     top: 0;
