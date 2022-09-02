@@ -938,9 +938,28 @@ function renderStep5() {
     stepTitle.innerHTML = "Finished State Transition Rates";
     step5.replaceChildren(stepTitle);
 
-
     const fileText = document.createElement("textarea");
     fileText.id = "text";
+
+    //Table
+    const table = document.createElement("table");
+    table.className = "table";
+    const tableThread = document.createElement("thead");
+    const table_tr = document.createElement("tr");
+    const sourceHeader = document.createElement("th");
+    sourceHeader.scope = "col";
+    sourceHeader.innerHTML = "Source";
+    const targetHeader = document.createElement("th");
+    targetHeader.scope = "col";
+    targetHeader.innerHTML = "Target";
+    const inducerHeader = document.createElement("th");
+    inducerHeader.scope = "col";
+    inducerHeader.innerHTML = "Inducer";
+    const rateHeader = document.createElement("th");
+    rateHeader.scope = "col";
+    rateHeader.innerHTML = "Transition Rate";
+    const tableBody = document.createElement("tbody");
+    
 
     for (let i = 0; i < data.links.length; i++) {
         const fromState = data.links[i].source.name;
@@ -953,8 +972,27 @@ function renderStep5() {
         const text = document.createElement("p");
         text.innerHTML = fromState + "&emsp;" + toState + "&emsp;" + inducerState + "&emsp;" + rate;
 
+        // Fill table by row
+        const body_tr = document.createElement("tr");
+        const sourceVal = document.createElement("td");
+        sourceVal.innerHTML = fromState;
+        const targetVal = document.createElement("td");
+        targetVal.innerHTML = toState;
+        const inducerVal = document.createElement("td");
+        inducerVal.innerHTML = inducerState;
+        const rateVal = document.createElement("td");
+        rateVal.innerHTML = rate;
+        
+        tableBody.appendChild(body_tr);
+        body_tr.appendChild(sourceVal);
+        body_tr.appendChild(targetVal);
+        body_tr.appendChild(inducerVal);
+        body_tr.appendChild(rateVal);
+
+        // Text added into TSV file
         fileText.innerHTML += fromState + "&#09;" + toState + "&#09;" + inducerState + "&#09;" + rate + "&#10";
         step5.appendChild(text);
+        text.style.display = "none";
         step5.appendChild(fileText);
         fileText.style.display = "none";
     }
@@ -981,7 +1019,15 @@ function renderStep5() {
         document.body.removeChild(element);
     }
 
-
+    step5.appendChild(table);
+    table.appendChild(tableThread);
+    tableThread.appendChild(table_tr);
+    table_tr.appendChild(sourceHeader);
+    table_tr.appendChild(targetHeader);
+    table_tr.appendChild(inducerHeader);
+    table_tr.appendChild(rateHeader);
+    table.appendChild(tableBody);
+    
     step5.appendChild(downloadButton);
 
     Graph.graphData(data);
