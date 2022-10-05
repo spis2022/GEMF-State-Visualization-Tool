@@ -7,7 +7,6 @@ let inputCounter = 0;
 let data = {
     "nodes": [],
     "links": [],
-    "linkCounter": {},
 }
 let step = 1;
 
@@ -75,6 +74,11 @@ window.onload = function() {
             ctx.stroke();
         })
         .linkCanvasObject((link, ctx, globalScale) => {
+            const repeats = data.links.filter(
+                e => e.source.id === link.source.id && e.target.id === link.target.id 
+                || e.source.id === link.target.id && e.target.id === link.source.id);
+            const repeatCount = repeats.findIndex(e => e === link) + 1;
+
             ctx.lineWidth = 1;
             const source = scaleTriangle(link);
             const dx = (source[2] - source[0]);
@@ -88,7 +92,7 @@ window.onload = function() {
             const my = (link.target.y + link.source.y) / 2
             let fx = mx;
             let fy = my;
-            if (data.linkCounter[src + "-" + tgt] === 1) {
+            if (repeats.length === 1) {
                 ctx.beginPath();
                 ctx.strokeStyle = "black";
                 ctx.moveTo(source[0], source[1]);
@@ -96,7 +100,7 @@ window.onload = function() {
                 ctx.stroke();
                 drawArrow(ctx, source[0], source[1], source[0] + x99, source[1] + y99, .9);
             } else {
-                const h = (Math.sqrt(dist) * 2 + (Math.floor((link.repeatCount + 1) / 2) - 1) * NODE_RADIUS * 1.5) * (link.source.id === src ? 1 : -1) * (dy < 0 ? 1 : -1) * (link.repeatCount % 2 === 0 ? 1 : -1);
+                const h = (Math.sqrt(dist) * 2 + (Math.floor((repeatCount + 1) / 2) - 1) * NODE_RADIUS * 1.5) * (link.source.id === src ? 1 : -1) * (dy < 0 ? 1 : -1) * (repeatCount % 2 === 0 ? 1 : -1);
                 // perpendicular slope
                 const ps = - x99 / y99
                 const dfx = h / Math.sqrt(ps * ps + 1)
@@ -118,7 +122,7 @@ window.onload = function() {
                 // perp of rm
                 const prm = - rdx / rdy
                 let flip = 1;
-                if ((link.repeatCount % 2 === 0 && link.source.id === src) || (link.repeatCount % 2 === 1 && link.source.id === tgt)) {
+                if ((repeatCount % 2 === 0 && link.source.id === src) || (repeatCount % 2 === 1 && link.source.id === tgt)) {
                     flip = -1;
                 }
                 const arrdfx = - dist / Math.sqrt(prm * prm + 1) * (rdy > 0 ? -1 : 1) * flip;
@@ -502,20 +506,19 @@ function renderStep2() {
                 let tgt = Math.max(data.nodes[i].id, data.nodes[j].id);
                 input.onclick = function() {
                     if (input.checked) {
-                        if (data.linkCounter[src + "-" + tgt] === undefined) {
-                            data.linkCounter[src + "-" + tgt] = 1;
-                        } else {
-                            data.linkCounter[src + "-" + tgt]++;
-                        }
                         data.links.push({
                             id: data.nodes[i].id + "-" + data.nodes[j].id,
                             source: data.nodes[i].id,
                             target: data.nodes[j].id,
-                            repeatCount: data.linkCounter[src + "-" + tgt]
                         })
                     } else {
-                        data.links = data.links.filter(link => !(link.source.id === data.nodes[i].id && link.target.id === data.nodes[j].id));
-                        data.linkCounter[src + "-" + tgt]--;
+                        const oldLink = data.links.splice(
+                            data.links.findIndex(
+                                link => link.source.id === data.nodes[i].id && link.target.id === data.nodes[j].id && link.inducer === undefined
+                            )
+                        , 1)
+                        console.log(oldLink)
+                        console.log(data);
                     }
                     Graph.graphData(data);
                 }
@@ -550,46 +553,48 @@ function renderStep3() {
 
     // loop through all data.links and create input fields for transition rates
     for (let i = 0; i < data.links.length; i++) {
-        // create the link item element
-        const linkItem = document.createElement("div");
-        linkItem.id = "link-item-" + data.links[i].source.id + "-" + data.links[i].target.id;
+        if (data.links[i].inducer === undefined) {
+            // create the link item element
+            const linkItem = document.createElement("div");
+            linkItem.id = "link-item-" + data.links[i].source.id + "-" + data.links[i].target.id;
 
-        // create the link paragraph (label) element
-        const linkPar = document.createElement("p");
-        linkPar.innerHTML = "Link from " + data.links[i].source.name + " to " + data.links[i].target.name + ":";
+            // create the link paragraph (label) element
+            const linkPar = document.createElement("p");
+            linkPar.innerHTML = "Link from " + data.links[i].source.name + " to " + data.links[i].target.name + ":";
 
-        // create the div to put the input element
-        const linkInputGroup = document.createElement("div");
-        linkInputGroup.className = "input-group mb-3";
-        linkInputGroup.id = "link-input-group-" + data.links[i].source.id + "-" + data.links[i].target.id;
+            // create the div to put the input element
+            const linkInputGroup = document.createElement("div");
+            linkInputGroup.className = "input-group mb-3";
+            linkInputGroup.id = "link-input-group-" + data.links[i].source.id + "-" + data.links[i].target.id;
 
-        // create the actual input element
-        const linkInput = document.createElement("input");
-        linkInput.type = "number";
-        linkInput.className = "form-control";
-        linkInput.placeholder = "Transition Rate";
-        linkInput.ariaLabel = "Transition Rate";
-        linkInput.id = "link-input-" + data.links[i].source.id + "-" + data.links[i].target.id;
-        linkInput.value = data.links[i].rate ?? '';
+            // create the actual input element
+            const linkInput = document.createElement("input");
+            linkInput.type = "number";
+            linkInput.className = "form-control";
+            linkInput.placeholder = "Transition Rate";
+            linkInput.ariaLabel = "Transition Rate";
+            linkInput.id = "link-input-" + data.links[i].source.id + "-" + data.links[i].target.id;
+            linkInput.value = data.links[i].rate ?? '';
 
-        // add an event listener to detect when the user types something in the input
-        linkInput.addEventListener('input', updateValue);
+            // add an event listener to detect when the user types something in the input
+            linkInput.addEventListener('input', updateValue);
 
-        function updateValue(e) {
-            // Find and update the corresponding link
-            data.links[i].rate = e.target.value;
-            linkInput.classList.remove("border");
-            linkInput.classList.remove("border-danger");
-            // Updating the graph
+            function updateValue(e) {
+                // Find and update the corresponding link
+                data.links[i].rate = e.target.value;
+                linkInput.classList.remove("border");
+                linkInput.classList.remove("border-danger");
+                // Updating the graph
+                Graph.graphData(data);
+            }
+
+            // actually add everything to the DOM and update the graph
+            step3.appendChild(linkItem);
+            linkItem.appendChild(linkPar);
+            linkItem.appendChild(linkInputGroup);
+            linkInputGroup.appendChild(linkInput);
             Graph.graphData(data);
         }
-
-        // actually add everything to the DOM and update the graph
-        step3.appendChild(linkItem);
-        linkItem.appendChild(linkPar);
-        linkItem.appendChild(linkInputGroup);
-        linkInputGroup.appendChild(linkInput);
-        Graph.graphData(data);
     }
 }
 
@@ -725,11 +730,6 @@ function renderStep4() {
             // TODO: show alert when tries to add an existing link
             const src = Math.min(selectSource.value, selectTarget.value);
             const tgt = Math.max(selectSource.value, selectTarget.value);
-            if (data.linkCounter[src + "-" + tgt] === undefined) {
-                data.linkCounter[src + "-" + tgt] = 1;
-            } else {
-                data.linkCounter[src + "-" + tgt]++;
-            }
             data.links.push({
                 id: selectSource.value + "-" + selectTarget.value + "-" + selectInducer.value,
                 shortName: selectSource.options[selectSource.selectedIndex].text[0] + "-" + selectTarget.options[selectTarget.selectedIndex].text[0] + ", " + selectInducer.options[selectInducer.selectedIndex].text[0],
@@ -737,7 +737,6 @@ function renderStep4() {
                 target: parseInt(selectTarget.value),
                 inducer: parseInt(selectInducer.value),
                 rate: rateInput.value,
-                repeatCount: data.linkCounter[src + "-" + tgt]
             })
 
             createEdgeEntry(data.links[data.links.length - 1])
@@ -856,7 +855,6 @@ function createEdgeEntry(link) {
     deleteButton.onclick = () => {
         const src = Math.min(link.source.id, link.target.id);
         const tgt = Math.max(link.source.id, link.target.id);
-        data.linkCounter[src + "-" + tgt]--;
         data.links = data.links.filter(l => l.id !== link.id);
         Graph.graphData(data);
         edgeGroup.remove();
