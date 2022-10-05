@@ -235,7 +235,7 @@ function handleNext() {
     }
 }
 
-// back button
+// back button, displaying next container and hiding the other
 function handleBack() {
     if (step === 2) {
         step--;
@@ -317,6 +317,7 @@ function createNewInput() {
     inptGroup.appendChild(inpt);
     inptGroup.appendChild(button);
 
+    // input update logic
     inpt.addEventListener('input', updateValue);
     let inputCreated = false;
 
@@ -361,6 +362,7 @@ function step1Next() {
         }
     }
 
+    // alert repeats
     const repeat = Array.from(badState);
     for (let i = 0; i < repeat.length; i++) {
         const element = document.getElementById('s-1-input-' + repeat[i]);
@@ -385,6 +387,7 @@ function step1Next() {
 
 function step2Next() {
     const formTitle = document.getElementById("formTitle");
+    // sort links
     data.links.sort((a, b) => {
         if (a.source.name !== b.source.name) {
             return a.source.name.localeCompare(b.source.name, undefined, { numeric: true })
@@ -400,8 +403,8 @@ function step2Next() {
     step3.style.display = "flex";
     formTitle.innerHTML = "Data Input (Step 3)"
     console.log(data.links.filter(link => link.inducer === undefined));
+    // if 0 node-based transitions, go to step 4
     if (data.links.filter(link => link.inducer === undefined).length === 0) {
-        console.log("hit")
         handleNext();
     } else {
         renderStep3();
@@ -414,6 +417,7 @@ function renderStep2() {
 
     const container = document.getElementById("step2-container");
 
+    // remove past accordion 
     const oldAccordion = document.getElementById("accordionOpen");
     if (oldAccordion !== null) {
         container.removeChild(oldAccordion);
@@ -425,14 +429,17 @@ function renderStep2() {
 
     container.appendChild(accordion);
 
+    // create an accordion header for each node, contains rest of nodes to link to
     for (let i = 0; i < data.nodes.length; i++) {
         const accordionItem = document.createElement("div");
         accordionItem.className = "accordion-item";
 
+        // actual header
         const accordionHeader = document.createElement("h2");
         accordionHeader.className = "accordion-header";
         accordionHeader.id = "openAccordionHeading-" + data.nodes[i].id;
 
+        // accordion open/close toggle 
         const accordionButton = document.createElement("button");
         accordionButton.className = "accordion-button" + (i === 0 ? "" : " collapsed");
         accordionButton.type = "button";
@@ -442,6 +449,7 @@ function renderStep2() {
         accordionButton.setAttribute("aria-controls", "panels-collapse-" + data.nodes[i].id);
         accordionButton.innerHTML = "Links from State " + data.nodes[i].name + ":"
 
+        // panel of checkboxes
         const accordionPanel = document.createElement("div");
         accordionPanel.id = "panels-collapse-" + data.nodes[i].id;
         accordionPanel.className = "accordion-collapse collapse" + (i === 0 ? " show" : "");
@@ -459,11 +467,13 @@ function renderStep2() {
 
         for (let j = 0; j < data.nodes.length; j++) {
             if (i !== j) {
+                // create checkbox per node
                 const formCheck = document.createElement("div");
                 formCheck.className = "form-check";
 
                 const link = data.links.find(obj => obj.source.id === data.nodes[i].id && obj.target.id === data.nodes[j].id)
 
+                // actual checkbox
                 const input = document.createElement("input");
                 input.className = "form-check-input";
                 input.type = "checkbox";
@@ -472,8 +482,7 @@ function renderStep2() {
                 if (link !== undefined) {
                     input.checked = true;
                 }
-                let src = Math.min(data.nodes[i].id, data.nodes[j].id);
-                let tgt = Math.max(data.nodes[i].id, data.nodes[j].id);
+                // add / remove link logic
                 input.onclick = function() {
                     if (input.checked) {
                         data.links.push({
@@ -482,13 +491,14 @@ function renderStep2() {
                             target: data.nodes[j].id,
                         })
                     } else {
-                        const oldLink = data.links.splice(
+                        data.links.splice(
                             data.links.findIndex(
-                                link => link.source.id === data.nodes[i].id && link.target.id === data.nodes[j].id && link.inducer === undefined
+                                link => link.source.id === data.nodes[i].id 
+                                && link.target.id === data.nodes[j].id 
+                                // making sure not to remove any inducer-based transitions
+                                && link.inducer === undefined
                             )
                         , 1)
-                        console.log(oldLink)
-                        console.log(data);
                     }
                     Graph.graphData(data);
                 }
@@ -545,19 +555,16 @@ function renderStep3() {
             linkInput.id = "link-input-" + data.links[i].source.id + "-" + data.links[i].target.id;
             linkInput.value = data.links[i].rate ?? '';
 
-            // add an event listener to detect when the user types something in the input
+            // input change
             linkInput.addEventListener('input', updateValue);
 
             function updateValue(e) {
-                // Find and update the corresponding link
                 data.links[i].rate = e.target.value;
                 linkInput.classList.remove("border");
                 linkInput.classList.remove("border-danger");
-                // Updating the graph
                 Graph.graphData(data);
             }
 
-            // actually add everything to the DOM and update the graph
             step3.appendChild(linkItem);
             linkItem.appendChild(linkPar);
             linkItem.appendChild(linkInputGroup);
@@ -568,7 +575,7 @@ function renderStep3() {
 }
 
 function step3Next() {
-    // check inputs
+    // check inputs for blanks
     let valid = true;
     for (let i = 0; i < data.links.length; i++) {
         if (data.links[i].inducer === undefined) {
@@ -607,6 +614,7 @@ function step4Next() {
 }
 
 function renderStep4() {
+    // dom setup
     const step4 = document.getElementById("step4-container");
     const stepTitle = document.createElement("h3");
     stepTitle.className = "title";
@@ -621,7 +629,8 @@ function renderStep4() {
 
     const inducerLabel = document.createElement("p");
     inducerLabel.innerHTML = "Select Inducer Node:";
-
+    
+    // create node options for source
     const selectSource = document.createElement("select");
     selectSource.className = "form-select";
     selectSource.ariaLabel = "Select Source Node";
@@ -635,6 +644,7 @@ function renderStep4() {
         selectSource.appendChild(option);
     }
 
+    // create node options for target
     const selectTarget = document.createElement("select");
     selectTarget.className = "form-select";
     selectTarget.ariaLabel = "Select Target Node";
@@ -648,6 +658,7 @@ function renderStep4() {
         selectTarget.appendChild(option);
     }
 
+    // create node options for inducer
     const selectInducer = document.createElement("select");
     selectInducer.className = "form-select";
     selectInducer.ariaLabel = "Select Inducer Node";
@@ -661,6 +672,7 @@ function renderStep4() {
         selectInducer.appendChild(option);
     }
 
+    // inducer-based transition rate input
     const rateAndAddContainer = document.createElement("div");
     rateAndAddContainer.style.display = "flex";
     rateAndAddContainer.style.justifyContent = "space-between";
@@ -684,7 +696,9 @@ function renderStep4() {
     addButton.innerHTML = "Add";
     addButton.style.width = "30%";
     addButton.onclick = () => {
-        let valid = true
+        let valid = true;
+        // ensure valid inducer-based transition
+        // can't be to self
         if (selectSource.value === selectTarget.value) {
             valid = false
             selectSource.className += " border border-danger";
@@ -697,6 +711,7 @@ function renderStep4() {
             selectTarget.classList.remove("border-danger");
         }
 
+        // has to have rate
         if (rateInput.value.length === 0) {
             valid = false
             rateInput.className += " border border-danger";
@@ -705,11 +720,10 @@ function renderStep4() {
             rateInput.classList.remove("border-danger");
         }
 
-
+        // if inducer-based link doesn't exist already 
         if (valid && data.links.find(link => link.source.id === parseInt(selectSource.value) && link.target.id === parseInt(selectTarget.value) && link.inducer === parseInt(selectInducer.value)) === undefined) {
             // TODO: show alert when tries to add an existing link
-            const src = Math.min(selectSource.value, selectTarget.value);
-            const tgt = Math.max(selectSource.value, selectTarget.value);
+            // add link 
             data.links.push({
                 id: selectSource.value + "-" + selectTarget.value + "-" + selectInducer.value,
                 shortName: selectSource.options[selectSource.selectedIndex].text[0] + "-" + selectTarget.options[selectTarget.selectedIndex].text[0] + ", " + selectInducer.options[selectInducer.selectedIndex].text[0],
@@ -719,6 +733,7 @@ function renderStep4() {
                 rate: rateInput.value,
             })
 
+            // create new entry based off link 
             createEdgeEntry(data.links[data.links.length - 1])
         }
 
@@ -736,6 +751,7 @@ function renderStep4() {
     step4.appendChild(selectInducer);
     step4.appendChild(rateAndAddContainer);
 
+    // when step4 is rendered, create entries for existing inducer-based links
     for (let i = 0; i < data.links.length; i++) {
         if (data.links[i].inducer !== undefined) {
             createEdgeEntry(data.links[i]);
@@ -747,6 +763,7 @@ function renderStep4() {
 
 // create entry for inducer-based edge
 function createEdgeEntry(link) {
+    // display to dom
     const edgeGroup = document.createElement("div");
     edgeGroup.style.display = "flex";
     edgeGroup.style.flexWrap = "wrap";
@@ -772,6 +789,7 @@ function createEdgeEntry(link) {
     collapseBody.className = "card card-body w-100";
     collapseBody.style;
 
+    // source label
     const displaySource = document.createElement("input");
     displaySource.className = "form-control mb-3";
     displaySource.type = "text";
@@ -786,6 +804,7 @@ function createEdgeEntry(link) {
     displaySource.readOnly = true;
     displaySource.style.width = "30%";
 
+    // target label
     const displayTarget = document.createElement("input");
     displayTarget.className = "form-control mb-3";
     displayTarget.type = "text";
@@ -799,6 +818,7 @@ function createEdgeEntry(link) {
     displayTarget.readOnly = true;
     displayTarget.style.width = "30%";
 
+    // inducer label
     const displayInducer = document.createElement("input");
     displayInducer.className = "form-control mb-3";
     displayInducer.type = "text";
@@ -808,6 +828,7 @@ function createEdgeEntry(link) {
     displayInducer.readOnly = true;
     displayInducer.style.width = "25%";
 
+    // rate label
     const displayRate = document.createElement("input");
     displayRate.className = "form-control";
     displayRate.type = "text";
@@ -818,15 +839,9 @@ function createEdgeEntry(link) {
     displayRate.readOnly = true;
     displayRate.style.width = "20%";
 
-    //Icons
+    // trash icon
     const trash = document.createElement("i");
     trash.className = "bi bi-trash";
-    const pen = document.createElement("i");
-    pen.className = "bi bi-pen";
-    const arrow = document.createElement("i");
-    arrow.className = "bi bi-arrow-right";
-    const checkmark = document.createElement("i");
-    checkmark.className = "bi bi-check-lg";
 
     // delete button
     const deleteButton = document.createElement("button");
