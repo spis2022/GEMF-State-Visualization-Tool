@@ -1,9 +1,11 @@
 // ---- Global Variables ----
 const NODE_RADIUS = 12;
 const ARROW_SIZE = 4;
+const WIDTH_RESIZE_BREAKPOINT = 768;
 let Graph;
 // keeps track of how many step 1 input boxes have been created
 let inputCounter = 0;
+// graph data
 let data = {
     "nodes": [],
     "links": [],
@@ -13,17 +15,19 @@ let step = 1;
 
 // On Load
 window.onload = function() {
+    // create first entry input for step 1
     createNewInput();
 
+    // indicator cover visibility logic
     const graphIndicator = document.getElementById('graphIndicator')
-
+    // desktop
     graphIndicator.onmousedown = () => {
         graphIndicator.style.opacity = 0;
         setTimeout(() => {
             graphIndicator.style.display = "none";
         }, 500)
     }
-
+    // mobile
     graphIndicator.ontouchstart = () => {
         graphIndicator.style.opacity = 0;
         setTimeout(() => {
@@ -31,31 +35,25 @@ window.onload = function() {
         }, 500)
     }
 
-    
+    // cursor logic
     const graphDiv = document.getElementById('graph')
-
     graphDiv.onmouseover = () => {
         document.body.style.cursor = "pointer";
         console.log(data);
     }
-
     graphDiv.onmouseleave = () => {
         document.body.style.cursor = "default";
     }
 
-    // Graph Javascript
-    Graph = ForceGraph()
-        (graphDiv)
+    // create force graph
+    Graph = ForceGraph()(graphDiv)
 
     Graph.graphData(data)
-        .nodeId('id')
         .nodeVal(NODE_RADIUS)
         .nodeLabel('')
         .nodeAutoColorBy('group')
-        .linkSource('source')
-        .linkTarget('target')
-        .width(window.innerWidth >= 768 ? window.innerWidth * .6 : window.innerWidth)
-        .height(window.innerWidth >= 768 ? window.innerHeight : window.innerHeight * 0.6)
+        .width(window.innerWidth >= WIDTH_RESIZE_BREAKPOINT ? window.innerWidth * .6 : window.innerWidth)
+        .height(window.innerWidth >= WIDTH_RESIZE_BREAKPOINT ? window.innerHeight : window.innerHeight * 0.6)
         .maxZoom(5)
         .minZoom(1)
         .nodeCanvasObject((node, ctx, globalScale) => {
@@ -74,12 +72,14 @@ window.onload = function() {
             ctx.stroke();
         })
         .linkCanvasObject((link, ctx, globalScale) => {
+            // determine the nth repeat this link is from it's source to target
             const repeats = data.links.filter(
                 e => e.source.id === link.source.id && e.target.id === link.target.id 
                 || e.source.id === link.target.id && e.target.id === link.source.id);
             const repeatCount = repeats.findIndex(e => e === link) + 1;
 
             ctx.lineWidth = 1;
+            // determine points for arrow and midpoint circle
             const source = scaleTriangle(link);
             const dx = (source[2] - source[0]);
             const dy = (source[3] - source[1]);
@@ -92,6 +92,7 @@ window.onload = function() {
             const my = (link.target.y + link.source.y) / 2
             let fx = mx;
             let fy = my;
+            // draw straight line if there is only one line from source to target
             if (repeats.length === 1) {
                 ctx.beginPath();
                 ctx.strokeStyle = "black";
@@ -100,8 +101,10 @@ window.onload = function() {
                 ctx.stroke();
                 drawArrow(ctx, source[0], source[1], source[0] + x99, source[1] + y99, .9);
             } else {
-                const h = (Math.sqrt(dist) * 2 + (Math.floor((repeatCount + 1) / 2) - 1) * NODE_RADIUS * 1.5) * (link.source.id === src ? 1 : -1) * (dy < 0 ? 1 : -1) * (repeatCount % 2 === 0 ? 1 : -1);
-                // perpendicular slope
+                // height of curve from link normal
+                const h = (Math.sqrt(dist) * 2 + (Math.floor((repeatCount + 1) / 2) - 1) * NODE_RADIUS * 1.5) // actual height calculation
+                    * (link.source.id === src ? 1 : -1) * (dy < 0 ? 1 : -1) * (repeatCount % 2 === 0 ? 1 : -1); // determine which side the link should be on 
+                // more math to draw curved link, which is actually just an arc
                 const ps = - x99 / y99
                 const dfx = h / Math.sqrt(ps * ps + 1)
                 const dfy = dfx * ps
@@ -115,11 +118,10 @@ window.onload = function() {
                 ctx.strokeStyle = "black";
                 ctx.stroke();
 
+                // math to draw arrow
                 const rdx = source[2] - fitCircle.x
                 const rdy = source[3] - fitCircle.y
-                // slope
                 const rm = rdy / rdx
-                // perp of rm
                 const prm = - rdx / rdy
                 let flip = 1;
                 if ((repeatCount % 2 === 0 && link.source.id === src) || (repeatCount % 2 === 1 && link.source.id === tgt)) {
@@ -155,11 +157,13 @@ window.onload = function() {
                 document.body.style.cursor = "grab";
             }
         })
+        // get rid of any default forces unnecessary to tool   
         .d3Force('charge', null)
         .d3Force('center', null)
         .d3Force('collide', d3.forceCollide(NODE_RADIUS / 2))
         .d3Force('link', null)
 
+    // helper function for drawing curved edge
     function fitCircleToPoints(x1, y1, x2, y2, x3, y3) {
         var x, y, u;
         const slopeA = (x2 - x1) / (y1 - y2); // slope of vector from point 1 to 2
@@ -184,6 +188,7 @@ window.onload = function() {
         };
     }
 
+    // helper function for determining arrow location
     function scaleTriangle(link) {
         const d = Math.sqrt((Math.pow(link.target.x - link.source.x, 2) + Math.pow(link.target.y - link.source.y, 2)))
         const d_y = link.target.y - link.source.y;
@@ -193,6 +198,7 @@ window.onload = function() {
         return [x_i + link.source.x, y_i + link.source.y, -x_i + link.target.x, -y_i + link.target.y];
     }
 
+    // helper function for drawing arrow
     function drawArrow(ctx, x1, y1, x2, y2, t = 0.9) {
         const adx = x2 - x1;           // arrow dx
         const ady = y2 - y1;           // arrow dy
@@ -211,50 +217,25 @@ window.onload = function() {
         ctx.fill();
     };
 
+    // show step 1
     const step1 = document.getElementById("step1-container");
     step1.style.display = "flex";
-
 }
 
+// next button
 function handleNext() {
-    const formTitle = document.getElementById("formTitle");
     if (step === 1) {
         step1Next();
     } else if (step === 2) {
-        data.links.sort((a, b) => {
-            if (a.source.name !== b.source.name) {
-                return a.source.name.localeCompare(b.source.name, undefined, { numeric: true })
-            } else {
-                return a.target.name.localeCompare(b.target.name, undefined, { numeric: true })
-            }
-        })
-        Graph.graphData(data);
-        step++;
-        const step2 = document.getElementById("step2-container");
-        const step3 = document.getElementById("step3-container");
-        step2.style.display = "none";
-        step3.style.display = "flex";
-        formTitle.innerHTML = "Data Input (Step 3)"
-        console.log(data.links.filter(link => link.inducer === undefined));
-        if (data.links.filter(link => link.inducer === undefined).length === 0) {
-            console.log("hit")
-            handleNext();
-        } else {
-            renderStep3();
-        }
+        step2Next();
     } else if (step === 3) {
         step3Next();
     } else if (step === 4) {
-        step++;
-        const step4 = document.getElementById("step4-container");
-        const step5 = document.getElementById("step5-container");
-        step4.style.display = "none";
-        step5.style.display = "flex";
-        formTitle.innerHTML = "Data (Step 5)";
-        renderStep5();
+        step4Next();
     }
 }
 
+// back button
 function handleBack() {
     if (step === 2) {
         step--;
@@ -299,73 +280,49 @@ function createNewInput() {
     // increment (by 1) the amount of inputs we created
     inputCounter++;
 
-    // holds everything for this new input
+    // input container
     const inptGroup = document.createElement("div");
-    // making the input group a bootstrap-styled input group
     inptGroup.className = "input-group mb-3 w-100";
 
-    // the actual input
+    // input field
     const inpt = document.createElement("input");
-    // sets the type of input to a text input
     inpt.type = 'text';
-    // gives the input a unique id (so we can reference later to correspond to the correct node)
     inpt.id = 's-1-input-' + inputCounter;
-    // making the input a bootstrap-styled input
     inpt.className = 'form-control';
-    // setting placeholder
     inpt.placeholder = 'State Name';
-    // for bootstrap / accessibility  
     inpt.ariaLabel = 'State Name';
 
-    // create input button to delete an input / node
+    // input delete button 
     const button = document.createElement("button");
-    // bootstrap styling it
     button.className = "btn btn-danger";
     button.type = "button";
-    // unique button id that corresponds to a node
     button.id = "button-addon-" + inputCounter;
-    // unique button id, but just the number 
     button.count = inputCounter;
-    // sets the button text
     button.innerHTML = "Delete";
 
-    // listens to see if user presses delete button
     button.addEventListener('click', deleteInput);
 
     function deleteInput(e) {
-        // make sure that we're not deleting the last input (which means we always have at least one input)
         if (button.count !== inputCounter) {
-            // deletes the input group from the DOM
             inptGroup.remove();
-            // keeps every node that has an id not equal to the button.count (corresponds to a specific node) 
             data.nodes = data.nodes.filter(node => node.id !== button.count);
             // keeps every link that doesn't have source node id equal to the button.count or a target node id equal to the button count 
-            // deletes any links that go from or to the node
             data.links = data.links.filter(link => !(link.source.id === button.count || link.target.id === button.count))
             Graph.graphData(data);
         }
     }
 
-    // get the step1-container
     const element = document.getElementById("step1-container");
-    // put input group inside the step1-container
     element.appendChild(inptGroup);
-    // put inpt into input group 
     inptGroup.appendChild(inpt);
-    // put button into input group, after the input
     inptGroup.appendChild(button);
 
-    // listens to see if the input text got changed
     inpt.addEventListener('input', updateValue);
-    // keeps track of whether the input has already been created 
     let inputCreated = false;
 
     function updateValue(e) {
-        // if the input has not been created
         if (!inputCreated) {
-            // set the input to have been created
             inputCreated = true;
-            // create a new node (and push it to the data.nodes) and give the new node's name a value of whatever was input
             data.nodes.push({
                 id: button.count,
                 name: e.target.value,
@@ -379,50 +336,40 @@ function createNewInput() {
             // set up a new blank input box 
             createNewInput();
         } else {
-            // find the pre-existing node by id
             let node = data.nodes.find(x => x.id === button.count);
-            // remove any red border
             inpt.classList.remove("border");
             inpt.classList.remove("border-danger");
-            // updates the name to the new value in the input
             node.name = e.target.value;
             Graph.graphData(data);
         }
     }
 }
 
-// validating step 1 nodes and proceeding to step 2 if all is good
+// proceed from step 1, includes validation 
 function step1Next() {
     // create empty set that will hold duplicate / empty nodes
     let badState = new Set();
     for (let i = 0; i < data.nodes.length; i++) {
-        // check for duplicate state names
         for (let j = i + 1; j < data.nodes.length; j++) {
-            // if two nodes have the same name, then both get added to the badState Set
             if (data.nodes[i].name === data.nodes[j].name) {
                 badState.add(data.nodes[i].id);
                 badState.add(data.nodes[j].id);
             }
         }
-        // if the node name is an empty string, then add it to the badState Set 
         if (data.nodes[i].name.length === 0) {
             badState.add(data.nodes[i].id);
         }
     }
 
-    // makes the badState Set into an array (which can be iterated over)
     const repeat = Array.from(badState);
     for (let i = 0; i < repeat.length; i++) {
-        // finds the corresponding input and adds a red border
         const element = document.getElementById('s-1-input-' + repeat[i]);
         element.className += " border border-danger"
     }
 
-    // if there's no bad nodes and we have at least one node, continue to step 2 
+    // continuing to step 2
     if (repeat.length === 0 && data.nodes.length > 0) {
-        // increment step (move to next step)
         step++;
-        // get step 1 container and hide it
         const element = document.getElementById("step1-container");
         element.style.display = "none";
         // sorts the nodes alphabetically 
@@ -436,7 +383,30 @@ function step1Next() {
 
 // -------- STEP 2 --------
 
-
+function step2Next() {
+    const formTitle = document.getElementById("formTitle");
+    data.links.sort((a, b) => {
+        if (a.source.name !== b.source.name) {
+            return a.source.name.localeCompare(b.source.name, undefined, { numeric: true })
+        } else {
+            return a.target.name.localeCompare(b.target.name, undefined, { numeric: true })
+        }
+    })
+    Graph.graphData(data);
+    step++;
+    const step2 = document.getElementById("step2-container");
+    const step3 = document.getElementById("step3-container");
+    step2.style.display = "none";
+    step3.style.display = "flex";
+    formTitle.innerHTML = "Data Input (Step 3)"
+    console.log(data.links.filter(link => link.inducer === undefined));
+    if (data.links.filter(link => link.inducer === undefined).length === 0) {
+        console.log("hit")
+        handleNext();
+    } else {
+        renderStep3();
+    }
+}
 
 function renderStep2() {
     const show = document.getElementById("step2-container");
@@ -542,7 +512,6 @@ function renderStep2() {
 // -------- STEP 3 --------
 
 
-
 function renderStep3() {
     // delete anything that existed in step3-container
     const step3 = document.getElementById("step3-container");
@@ -625,6 +594,17 @@ function step3Next() {
 
 
 // -------- STEP 4 --------
+
+function step4Next() {
+    const formTitle = document.getElementById("formTitle");
+    step++;
+    const step4 = document.getElementById("step4-container");
+    const step5 = document.getElementById("step5-container");
+    step4.style.display = "none";
+    step5.style.display = "flex";
+    formTitle.innerHTML = "Data (Step 5)";
+    renderStep5();
+}
 
 function renderStep4() {
     const step4 = document.getElementById("step4-container");
@@ -765,8 +745,8 @@ function renderStep4() {
     Graph.graphData(data);
 }
 
+// create entry for inducer-based edge
 function createEdgeEntry(link) {
-    console.log(link);
     const edgeGroup = document.createElement("div");
     edgeGroup.style.display = "flex";
     edgeGroup.style.flexWrap = "wrap";
@@ -848,19 +828,19 @@ function createEdgeEntry(link) {
     const checkmark = document.createElement("i");
     checkmark.className = "bi bi-check-lg";
 
+    // delete button
     const deleteButton = document.createElement("button");
     deleteButton.className = "btn btn-danger p-0 mb-3";
     deleteButton.appendChild(trash);
     deleteButton.style.width = "10%";
     deleteButton.onclick = () => {
-        const src = Math.min(link.source.id, link.target.id);
-        const tgt = Math.max(link.source.id, link.target.id);
         data.links = data.links.filter(l => l.id !== link.id);
         Graph.graphData(data);
         edgeGroup.remove();
         collapseStyle.parentNode.removeChild(collapseStyle)
     }
 
+    // display info
     const preSource = document.createElement("p");
     preSource.innerHTML = "Source: ";
     const sourceDivider = document.createElement("p");
@@ -869,44 +849,6 @@ function createEdgeEntry(link) {
     targetDivider.innerHTML = "Inducer: ";
     const inducerDivider = document.createElement("p");
     inducerDivider.innerHTML = "Rate: ";
-
-    const editButton = document.createElement("button");
-    editButton.className = "btn btn-secondary p-0 mb-3";
-    editButton.appendChild(pen);
-    editButton.style.width = "10%";
-    let editing = false;
-    editButton.onclick = () => {
-        if (!editing) {
-            editing = true;
-            //TODO: make tab collapse when edit button is clicked
-            displaySource.disabled = false;
-            displaySource.readOnly = false;
-            displayTarget.disabled = false;
-            displayTarget.readOnly = false;
-            displayInducer.disabled = false;
-            displayInducer.readOnly = false;
-            displayRate.disabled = false;
-            displayRate.readOnly = false;
-            // add save changes or green check box and cancel button?
-            const saveButton = document.createElement("button");
-            saveButton.className = "btn btn-success";
-            saveButton.appendChild(checkmark);
-            saveButton.style.width = "15%";
-            collapseBody.appendChild(saveButton);
-            saveButton.onclick = () => {
-                displaySource.disabled = true;
-                displaySource.readOnly = true;
-                displayTarget.disabled = true;
-                displayTarget.readOnly = true;
-                displayInducer.disabled = true;
-                displayInducer.readOnly = true;
-                displayRate.disabled = true;
-                displayRate.readOnly = true;
-                editing = false;
-                collapseBody.removeChild(saveButton);
-            }
-        }
-    }
 
     const step4 = document.getElementById("step4-container");
 
@@ -923,12 +865,12 @@ function createEdgeEntry(link) {
     collapseBody.appendChild(displayInducer);
     collapseBody.appendChild(inducerDivider);
     collapseBody.appendChild(displayRate);
-    // edgeGroup.appendChild(editButton);
     edgeGroup.appendChild(deleteButton);
     step4.appendChild(collapseStyle);
     Graph.graphData(data);
 }
 
+// display finished str tsv results
 function renderStep5() {
     const step5 = document.getElementById("step5-container");
     const stepTitle = document.createElement("h3");
@@ -939,7 +881,7 @@ function renderStep5() {
     const fileText = document.createElement("textarea");
     fileText.id = "text";
 
-    //Table
+    // results display table
     const table = document.createElement("table");
     table.className = "table";
     const tableThread = document.createElement("thead");
@@ -957,7 +899,6 @@ function renderStep5() {
     rateHeader.scope = "col";
     rateHeader.innerHTML = "Transition Rate";
     const tableBody = document.createElement("tbody");
-    
 
     for (let i = 0; i < data.links.length; i++) {
         const fromState = data.links[i].source.name;
@@ -967,10 +908,8 @@ function renderStep5() {
             inducerState = data.nodes.find(node => node.id === data.links[i].inducer).name;
         }
         const rate = data.links[i].rate;
-        const text = document.createElement("p");
-        text.innerHTML = fromState + "&emsp;" + toState + "&emsp;" + inducerState + "&emsp;" + rate;
 
-        // Fill table by row
+        // fill table by row
         const body_tr = document.createElement("tr");
         const sourceVal = document.createElement("td");
         sourceVal.innerHTML = fromState;
@@ -987,14 +926,13 @@ function renderStep5() {
         body_tr.appendChild(inducerVal);
         body_tr.appendChild(rateVal);
 
-        // Text added into TSV file
+        // add text into tsv file
         fileText.innerHTML += fromState + "&#09;" + toState + "&#09;" + inducerState + "&#09;" + rate + "&#10";
-        step5.appendChild(text);
-        text.style.display = "none";
         step5.appendChild(fileText);
         fileText.style.display = "none";
     }
 
+    // downloading finished tsv
     const downloadButton = document.createElement("button");
     downloadButton.className = "btn btn-primary";
     downloadButton.id = "btn"
@@ -1004,6 +942,7 @@ function renderStep5() {
         download("str.tsv", text);
     }
 
+    // actual download function
     function download(filename, text) {
         var element = document.createElement('a');
         element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
@@ -1025,7 +964,6 @@ function renderStep5() {
     table_tr.appendChild(inducerHeader);
     table_tr.appendChild(rateHeader);
     table.appendChild(tableBody);
-    
     step5.appendChild(downloadButton);
 
     Graph.graphData(data);
