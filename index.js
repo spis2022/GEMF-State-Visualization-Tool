@@ -495,7 +495,7 @@ function renderStep2() {
                             data.links.findIndex(
                                 link => link.source.id === data.nodes[i].id 
                                 && link.target.id === data.nodes[j].id 
-                                // making sure not to remove any inducer-based transitions
+                                // making sure not to remove any edge-based transitions
                                 && link.inducer === undefined
                             )
                         , 1)
@@ -580,8 +580,11 @@ function step3Next() {
     for (let i = 0; i < data.links.length; i++) {
         if (data.links[i].inducer === undefined) {
             const input = document.getElementById("link-input-" + data.links[i].source.id + "-" + data.links[i].target.id);
-            if (data.links[i].rate === undefined || input.value.length === 0) {
-                data.links[i].rate = undefined;
+            if (data.links[i].rate === undefined || input.value.length === 0 || input.value < 0) {
+                if (data.links[i].rate === undefined) {
+                    data.links[i].rate = undefined;
+                } else if (data.links[i].rate < 0) {
+                }
                 valid = false;
                 input.className += " border border-danger"
             }
@@ -618,7 +621,7 @@ function renderStep4() {
     const step4 = document.getElementById("step4-container");
     const stepTitle = document.createElement("h3");
     stepTitle.className = "title";
-    stepTitle.innerHTML = "Inducer-Based Transition Rates"
+    stepTitle.innerHTML = "Edge-Based Transition Rates"
     step4.replaceChildren(stepTitle);
 
     const sourceLabel = document.createElement("p");
@@ -672,7 +675,7 @@ function renderStep4() {
         selectInducer.appendChild(option);
     }
 
-    // inducer-based transition rate input
+    // edge-based transition rate input
     const rateAndAddContainer = document.createElement("div");
     rateAndAddContainer.style.display = "flex";
     rateAndAddContainer.style.justifyContent = "space-between";
@@ -697,7 +700,7 @@ function renderStep4() {
     addButton.style.width = "30%";
     addButton.onclick = () => {
         let valid = true;
-        // ensure valid inducer-based transition
+        // ensure valid edge-based transition
         // can't be to self
         if (selectSource.value === selectTarget.value) {
             valid = false
@@ -720,7 +723,7 @@ function renderStep4() {
             rateInput.classList.remove("border-danger");
         }
 
-        // if inducer-based link doesn't exist already 
+        // if edge-based link doesn't exist already 
         if (valid && data.links.find(link => link.source.id === parseInt(selectSource.value) && link.target.id === parseInt(selectTarget.value) && link.inducer === parseInt(selectInducer.value)) === undefined) {
             // TODO: show alert when tries to add an existing link
             // add link 
@@ -761,7 +764,7 @@ function renderStep4() {
     Graph.graphData(data);
 }
 
-// create entry for inducer-based edge
+// create entry for edge-based transition
 function createEdgeEntry(link) {
     // display to dom
     const edgeGroup = document.createElement("div");
@@ -776,15 +779,15 @@ function createEdgeEntry(link) {
     collapseBttn.className = "btn btn-primary mb-3 w-100";
     collapseBttn.type = "button"
     collapseBttn.setAttribute("data-bs-toggle", "collapse");
-    collapseBttn.setAttribute("data-bs-target", "#collapseWidthExample");
-    collapseBttn.setAttribute("aria-controls", "collapseWidthExample");
+    collapseBttn.setAttribute("data-bs-target", "#collapseWidth-" + link.id);
+    collapseBttn.setAttribute("aria-controls", "collapseWidth-" + link.id);
     collapseBttn.ariaExpanded = "false";
     collapseBttn.innerHTML = "State Transition Edge " + link.shortName;
     const collapseStyle = document.createElement("div");
     collapseStyle.style.minHeight = "120px;"
     const collapse = document.createElement("div");
     collapse.className = "collapse";
-    collapse.id = "collapseWidthExample";
+    collapse.id = "collapseWidth-" + link.id;
     const collapseBody = document.createElement("div");
     collapseBody.className = "card card-body w-100";
     collapseBody.style;
